@@ -53,7 +53,7 @@ pip install sqlalchemy psycopg2-binary pandas yfinance loguru fastapi uvicorn py
 
 # 📝 Bước 4: Cấu hình file `.env`
 
-Sửa file `.env` trong thư mục `backend/` và sửa lại nội dung sau:
+Tạo file `.env` (lưu ý để nó cùng cấp với các thư mục như scripts,app,...) và copy nội dung từ file `.env.example` trong thư mục `backend/` và dán thêm nội dung sau:
 
 ```env
 # Thay 'mat_khau_cua_ban' bằng mật khẩu postgres đã đặt ở Bước 1
