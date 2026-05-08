@@ -347,3 +347,127 @@ Tuần 3 (Final)
 - [ ] Demo video 5-10 phút
 - [ ] README.md cập nhật đầy đủ
 - [ ] Code clean, có comments
+
+---
+
+## 8. PHÂN TÍCH PHỤ THUỘC GIỮA CÁC THÀNH VIÊN
+
+### 🔗 Sơ đồ phụ thuộc tổng quan
+
+```mermaid
+graph LR
+    TV1["TV1: Data Pipeline\n& Storage"] --> TV2["TV2: EDA &\nForecasting"]
+    TV1 --> TV3["TV3: Insight &\nStorytelling"]
+    TV2 --> TV3
+    TV2 --> TV4["TV4: Dashboard\nEnhancement"]
+    TV1 --> TV5["TV5: Report\nSlide & Demo"]
+    TV2 --> TV5
+    TV3 --> TV5
+    TV4 --> TV5
+```
+
+### 📌 Chi tiết từng mối phụ thuộc
+
+#### TV1 (Data Pipeline) → TV2 (EDA & Forecast)
+
+| Task TV2 | Cần từ TV1 | Mức phụ thuộc | Giải pháp nếu TV1 chưa xong |
+|---|---|---|---|
+| 2.1 EDA Overview | Dữ liệu lịch sử (1.3 Backfill) | 🔴 **BẮT BUỘC** | TV2 có thể dùng API tự fetch data + lưu CSV tạm để bắt đầu EDA trước |
+| 2.2 Time Series Analysis | Dữ liệu lịch sử 3-6 tháng | 🔴 **BẮT BUỘC** | Dùng `yfinance.download()` trực tiếp trong notebook để lấy data lịch sử |
+| 2.3 Anomaly Deep Dive | Dữ liệu lịch sử | 🟡 Một phần | Có thể phân tích trên dữ liệu realtime vài ngày |
+| 2.4-2.5 Forecasting | DB có data lịch sử sạch | 🔴 **BẮT BUỘC** | Tự fetch trong notebook, không cần đợi DB |
+
+> **⚡ GIẢI PHÁP:** TV2 **KHÔNG CẦN ĐỢI** TV1 nếu tự fetch dữ liệu trong notebook bằng `yfinance.download("BTC-USD", period="6mo")`. TV1 chỉ cần xong trước khi TV2 tích hợp forecast API vào backend (task 2.6).
+
+---
+
+#### TV1 (Data Pipeline) → TV3 (Insight)
+
+| Task TV3 | Cần từ TV1 | Mức phụ thuộc | Giải pháp nếu TV1 chưa xong |
+|---|---|---|---|
+| 3.1 Insight Framework | Không cần | ✅ Độc lập | — |
+| 3.2 Market Trend Narrative | Không cần (dùng insight_service hiện có) | ✅ Độc lập | — |
+| 3.3 Cross-Asset Insights | Dữ liệu lịch sử để phân tích correlation dài hạn | 🟡 Một phần | Dùng API hiện tại (90 ngày OHLCV), đủ cho phân tích cơ bản |
+
+> **⚡ GIẢI PHÁP:** TV3 **CÓ THỂ BẮT ĐẦU NGAY** vì phần insight chủ yếu là viết narrative + giải thích, không phụ thuộc DB.
+
+---
+
+#### TV2 (EDA & Forecast) → TV3 (Insight)
+
+| Task TV3 | Cần từ TV2 | Mức phụ thuộc | Giải pháp |
+|---|---|---|---|
+| 3.4 Anomaly Interpretation | Kết quả EDA anomaly (2.3) | 🟡 Một phần | TV3 có thể viết interpretation dựa trên anomaly detector hiện có, bổ sung sau khi TV2 xong EDA |
+| 3.8 Report: Insight & Conclusion | Kết quả forecast (2.4-2.5) | 🔴 **BẮT BUỘC** | Cần biết forecast kết quả gì để viết kết luận. **TV2 phải xong forecast trước tuần 3** |
+
+> **⚡ GIẢI PHÁP:** TV3 viết framework + narrative trước (tuần 1-2), bổ sung kết quả forecast vào kết luận (tuần 3) sau khi TV2 xong.
+
+---
+
+#### TV2 (Forecast) → TV4 (Dashboard)
+
+| Task TV4 | Cần từ TV2 | Mức phụ thuộc | Giải pháp |
+|---|---|---|---|
+| 4.2 Forecast Chart | API forecast (2.6) | 🔴 **BẮT BUỘC** | TV4 tạo component UI trước với mock data, swap sang real API khi TV2 xong |
+| 4.3 Comparison Page | Không cần | ✅ Độc lập | — |
+| 4.1 Date Range Picker | Không cần | ✅ Độc lập | — |
+
+> **⚡ GIẢI PHÁP:** TV4 làm tất cả task khác trước (date picker, comparison, mobile, error states). Chỉ task 4.2 (Forecast Chart) cần đợi TV2.
+
+---
+
+#### Tất cả → TV5 (Report & Demo)
+
+| Task TV5 | Cần từ ai | Mức phụ thuộc | Giải pháp |
+|---|---|---|---|
+| 5.1 Report Structure | Không cần | ✅ Độc lập | Làm ngay |
+| 5.2 Problem & Background | Không cần | ✅ Độc lập | Làm ngay |
+| 5.3 System Architecture | Không cần (đọc code hiện có) | ✅ Độc lập | Làm ngay |
+| 5.4 Compile Sections | **TV1 + TV2 + TV3 + TV4** | 🔴 **BẮT BUỘC** | Mỗi TV viết phần report của mình, TV5 chỉ compile. **Deadline: cuối tuần 2** |
+| 5.5 Conclusion | TV3 (insight) + TV2 (forecast) | 🔴 **BẮT BUỘC** | Đợi TV3 |
+| 5.6 Slide | Screenshots từ TV4 | 🟡 Một phần | Chụp screen tuần 3 khi dashboard ổn |
+| 5.7 Demo Video | Tất cả phải hoàn thành | 🔴 **BẮT BUỘC** | **Quay cuối cùng** |
+
+---
+
+### 🗓️ LỊCH TRÌNH TÍNH THEO PHỤ THUỘC
+
+```
+                  TUẦN 1                    TUẦN 2                    TUẦN 3
+                  ─────────────────         ─────────────────         ─────────────────
+TV1 (Pipeline)    [DB Schema + Backfill]──→ [Data Clean + Export]──→ [Viết report]
+                        │                        │
+                        ▼                        │
+TV2 (EDA)         [Notebooks EDA]──────────→ [Forecast Models]───→ [Viết report]
+                  (tự fetch data)                │                       │
+                        │                        ▼                       │
+TV3 (Insight)     [Framework + Narrative]──→ [Anomaly Interp]────→ [Kết luận FINAL]
+                  (độc lập)                  (dùng kết quả TV2)     (cần forecast TV2)
+                                                  │                       │
+TV4 (Dashboard)   [DatePicker + Compare]───→ [Mobile + Polish]───→ [Forecast Chart]
+                  (độc lập)                  (độc lập)             (cần API từ TV2)
+                                                                         │
+TV5 (Report)      [Outline + Problem +]────→ [Compile sections]──→ [Slide + Video]
+                  [Architecture]             (cần TV1-4 gửi bài)   (cần tất cả xong)
+```
+
+### ✅ TÓM TẮT: CÁI NÀO ĐỘC LẬP, CÁI NÀO PHỤ THUỘC
+
+| | TV1 | TV2 | TV3 | TV4 | TV5 |
+|---|---|---|---|---|---|
+| **Tuần 1** | ✅ Độc lập | ✅ Độc lập (tự fetch data) | ✅ Độc lập | ✅ Độc lập | ✅ Độc lập |
+| **Tuần 2** | ✅ Độc lập | ⚠️ Cần data TV1 cho forecast API | ⚠️ Cần kết quả EDA từ TV2 | ✅ Độc lập | ⚠️ Cần sections từ TV1-4 |
+| **Tuần 3** | ✅ Độc lập | ✅ Độc lập | 🔴 Cần forecast từ TV2 | 🔴 Cần API forecast từ TV2 | 🔴 Cần TẤT CẢ xong |
+
+### 🎯 ĐIỂM NGHẼN QUAN TRỌNG
+
+> [!WARNING]
+> **TV2 (Forecast) là nút thắt cổ chai lớn nhất!**
+> - TV3 cần kết quả forecast để viết kết luận (30% điểm!)
+> - TV4 cần API forecast để hiển thị chart
+> - TV5 cần tất cả để compile report
+>
+> **→ TV2 phải hoàn thành forecast model chậm nhất cuối tuần 2!**
+
+> [!TIP]
+> **Tin tốt:** Tuần 1 tất cả 5 người đều có thể làm song song hoàn toàn độc lập. Phụ thuộc chỉ bắt đầu từ tuần 2-3.
