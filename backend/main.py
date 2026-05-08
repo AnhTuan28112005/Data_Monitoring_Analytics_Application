@@ -12,8 +12,10 @@ from app.api import alerts as alerts_api
 from app.api import analytics as analytics_api
 from app.api import insights as insights_api
 from app.api import market as market_api
+from app.api import export as export_api # Import router xuất dữ liệu
 from app.api import portfolio as portfolio_api
 from app.api import websockets as ws_api
+from app.core.database import init_db # Import hàm khởi tạo bảng
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.services.background import (
@@ -26,7 +28,7 @@ from app.services.background import (
 
 _BACKGROUND_TASKS: list[asyncio.Task] = []
 
-
+init_db() # Khởi tạo bảng trong database nếu chưa tồn tại
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging()
@@ -67,7 +69,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+app.include_router(export_api.router) # Đăng ký endpoint /api/export
 # Routers
 app.include_router(market_api.router)
 app.include_router(alerts_api.router)

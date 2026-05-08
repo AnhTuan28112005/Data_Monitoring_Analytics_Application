@@ -19,6 +19,8 @@ from loguru import logger
 from app.core.cache import news_cache
 from app.core.config import settings
 from app.core.connection_manager import manager
+from app.core.database import SessionLocal  
+from app.services.persistence_service import PersistenceService  
 from app.ml.pattern_recognition import scan_patterns
 from app.services.alert_service import alert_service
 from app.services.crypto_service import crypto_service
@@ -33,6 +35,11 @@ async def price_loop() -> None:
             ticks = await market_service.fetch_all_prices()
             payload = {"type": "snapshot", "ticks": [t.model_dump(mode="json") for t in ticks]}
             await manager.broadcast("market", payload)
+            
+            # --- LƯU DATABASE ---
+            with SessionLocal() as db:
+                PersistenceService.save_market_ticks(db, ticks)
+            
             for t in ticks:
                 await alert_service.process_tick(t)
         except Exception as exc:
@@ -67,6 +74,15 @@ async def pattern_loop() -> None:
                             message=p.message,
                             detail=p.detail,
                         )
+                        with SessionLocal() as db:
+                            PersistenceService.save_alert(db, {
+                                "symbol": tick.symbol,
+                                "alert_type": p.type,
+                                "severity": p.severity,
+                                "message": p.message,
+                                "detail": p.detail,
+                                "time_timestamp": int(tick.timestamp.timestamp())
+                            })
         except Exception as exc:
             logger.warning(f"pattern_loop error: {exc}")
         await asyncio.sleep(settings.OHLCV_POLL_INTERVAL)
@@ -79,6 +95,13 @@ async def news_loop() -> None:
             items = await news_service.fetch_all(limit=30)
             news_cache.set("news", [i.model_dump(mode="json") for i in items])
             new_items = [i for i in items if i.id not in seen]
+            
+            # --- LƯU DATABASE TIN TỨC MỚI ---
+            if new_items:
+                with SessionLocal() as db:
+                    for n in new_items:
+                        PersistenceService.save_news(db, n)
+
             for n in new_items[:5]:
                 seen.add(n.id)
                 await alert_service.emit_news_event(
@@ -87,8 +110,7 @@ async def news_loop() -> None:
                     url=n.url,
                 )
             for old in items[5:]:
-                seen.add(old.id)  # don't re-alert backlog on first run
-            # Cap memory footprint of seen-set
+                seen.add(old.id)
             if len(seen) > 2000:
                 seen = set(list(seen)[-1000:])
         except Exception as exc:
@@ -99,8 +121,12 @@ async def news_loop() -> None:
 async def insight_loop() -> None:
     while True:
         try:
-            await insight_service.build()
+            report = await insight_service.build() 
             logger.info("Daily insight rebuilt.")
+            
+            with SessionLocal() as db:
+                PersistenceService.save_insight(db, "MARKET_OVERVIEW", str(report))
+                
         except Exception as exc:
             logger.warning(f"insight_loop error: {exc}")
         await asyncio.sleep(settings.INSIGHT_REBUILD_INTERVAL)
