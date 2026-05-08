@@ -1,0 +1,31 @@
+fastapi
+uvicorn[standard]
+websockets
+sse-starlette
+httpx
+aiohttp
+pydantic
+pydantic-settings
+python-dotenv
+
+# Data sources
+yfinance
+ccxt
+pycoingecko
+feedparser
+
+# Data / ML
+pandas
+numpy
+scikit-learn
+scipy
+
+# Caching / scheduling
+cachetools
+APScheduler
+
+# Utilities
+python-dateutil
+pytz
+orjson
+loguru

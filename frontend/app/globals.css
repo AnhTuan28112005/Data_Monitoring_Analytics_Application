@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body {
+  height: 100%;
+  background: radial-gradient(1200px 800px at 10% 0%, rgba(59,130,246,0.08), transparent 60%),
+              radial-gradient(1000px 700px at 90% 20%, rgba(168,85,247,0.06), transparent 60%),
+              #0a0e17;
+  color: #e6edf7;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #1f2a40;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@layer components {
+  .glass {
+    @apply bg-bg-card/70 backdrop-blur-md border border-line/60 rounded-2xl shadow-glass;
+  }
+  .glass-elev {
+    @apply bg-bg-elev/80 backdrop-blur-md border border-line/60 rounded-2xl shadow-glass;
+  }
+  .card-title {
+    @apply text-sm uppercase tracking-wider text-text-secondary;
+  }
+  .num-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .badge-up {
+    @apply text-accent-green bg-accent-green/10 px-2 py-0.5 rounded-md text-xs num-tabular;
+  }
+  .badge-down {
+    @apply text-accent-red bg-accent-red/10 px-2 py-0.5 rounded-md text-xs num-tabular;
+  }
+}
+
+.marquee-track {
+  display: inline-flex;
+  white-space: nowrap;
+  will-change: transform;
+}
