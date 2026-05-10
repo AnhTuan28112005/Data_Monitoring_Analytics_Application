@@ -1,38 +1,68 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-from sqlalchemy import text # Thêm cái này để query an toàn hơn
-from app.core.database import get_db
-import pandas as pd
+"""Data export API — CSV download from PostgreSQL."""
+from __future__ import annotations
+
 import io
 
-# Giữ nguyên prefix
+import pandas as pd
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from app.core.database import db_available, engine, get_db
+
 router = APIRouter(prefix="/api/export", tags=["Data Export"])
 
-# Thêm :path vào sau {symbol}
+
 @router.get("/csv/{symbol:path}")
-async def export_candles_csv(symbol: str, db: Session = Depends(get_db)):
-    # In ra terminal để bồ debug xem nó có nhận được symbol không
-    print(f"🔍 Đang truy vấn dữ liệu xuất cho: {symbol}")
-    
-    # Đọc dữ liệu từ Postgres
-    # Tui khuyên dùng params để tránh lỗi SQL Injection nếu symbol có ký tự lạ
-    query = text("SELECT * FROM ohlcv_candles WHERE symbol = :s ORDER BY time_timestamp ASC")
-    df = pd.read_sql(query, db.bind, params={"s": symbol})
-    
-    # Nếu không có dữ liệu thì báo lỗi
+async def export_candles_csv(
+    symbol: str,
+    timeframe: str = Query("1h", description="Filter by timeframe"),
+    db: Session = Depends(get_db),
+):
+    """Download OHLCV candle data as CSV for a given symbol."""
+    if not db_available() or db is None:
+        raise HTTPException(503, "Database not configured. CSV export unavailable.")
+
+    query = text("""
+        SELECT symbol, timeframe, time_timestamp, open, high, low, close, volume
+        FROM ohlcv_candles
+        WHERE symbol = :s AND timeframe = :tf
+        ORDER BY time_timestamp ASC
+    """)
+
+    # Use engine directly (read-only query)
+    df = pd.read_sql(query, engine, params={"s": symbol, "tf": timeframe})
+
     if df.empty:
-        raise HTTPException(status_code=404, detail=f"Không tìm thấy dữ liệu cho {symbol} trong database")
-    
-    # Chuyển thành CSV stream
+        raise HTTPException(404, f"No data found for {symbol} ({timeframe})")
+
+    # Convert unix timestamp to datetime for readability
+    df["datetime"] = pd.to_datetime(df["time_timestamp"], unit="s", utc=True)
+
     stream = io.StringIO()
     df.to_csv(stream, index=False)
-    
-    # Chuẩn hóa tên file (thay / thành _)
-    safe_filename = symbol.replace('/', '_')
-    
+
+    safe_name = symbol.replace("/", "_").replace("^", "")
     return StreamingResponse(
-        iter([stream.getvalue()]), 
+        iter([stream.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={safe_filename}_history.csv"}
+        headers={"Content-Disposition": f"attachment; filename={safe_name}_{timeframe}.csv"},
     )
+
+
+@router.get("/tables")
+async def list_tables(db: Session = Depends(get_db)):
+    """List all tables and their row counts."""
+    if not db_available() or db is None:
+        raise HTTPException(503, "Database not configured.")
+
+    tables = ["ohlcv_candles", "prices", "alerts", "news", "daily_insights"]
+    result = {}
+    for t in tables:
+        try:
+            row = db.execute(text(f"SELECT COUNT(*) FROM {t}")).fetchone()
+            result[t] = row[0] if row else 0
+        except Exception:
+            result[t] = "error"
+    return result

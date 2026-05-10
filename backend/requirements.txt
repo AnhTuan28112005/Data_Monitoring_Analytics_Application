@@ -24,6 +24,10 @@ scipy
 cachetools
 APScheduler
 
+# Database
+sqlalchemy
+psycopg2-binary
+
 # Utilities
 python-dateutil
 pytz
