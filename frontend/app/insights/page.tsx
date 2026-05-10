@@ -80,6 +80,12 @@ export default function InsightsPage() {
               </li>
             ))}
           </ul>
+          {data.anomalies.length > 0 && (
+            <div className="mt-3 p-2 bg-bg-card/50 border border-line/40 rounded text-xs text-text-secondary">
+              <p className="text-[10px] uppercase text-text-muted mb-1">📊 Summary</p>
+              <p>{data.anomalies.length} anomalies with unusual volume movements detected.</p>
+            </div>
+          )}
         </Card>
 
         <Card title="Data-driven Insights" action={<Sparkles className="w-4 h-4 text-accent-purple" />}>
@@ -90,6 +96,12 @@ export default function InsightsPage() {
               </li>
             ))}
           </ul>
+          {data.insights.length > 0 && (
+            <div className="mt-3 p-2 bg-bg-card/50 border border-line/40 rounded text-xs text-text-secondary">
+              <p className="text-[10px] uppercase text-text-muted mb-1">📊 Summary</p>
+              <p>{data.insights.length} key insights from market analysis.</p>
+            </div>
+          )}
         </Card>
       </div>
 
@@ -180,6 +192,10 @@ function TimezoneAnalysisCard({ data }: { data: DailyInsight }) {
         style={{ width: "100%", height: "320px" }}
         useResizeHandler
       />
+      <div className="mt-3 p-2 bg-bg-card/50 border border-line/40 rounded text-xs text-text-secondary">
+        <p className="text-[10px] uppercase text-text-muted mb-1">📊 Session Summary</p>
+        <p>Trading activity across Asia, Europe, and US sessions. Each session shows distinct volume and volatility patterns.</p>
+      </div>
     </Card>
   );
 }

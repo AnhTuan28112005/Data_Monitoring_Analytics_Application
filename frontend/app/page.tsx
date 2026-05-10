@@ -4,6 +4,7 @@ import { MarketOverviewWidget } from "@/components/dashboard/MarketOverviewWidge
 import { MultiAssetPanel } from "@/components/dashboard/MultiAssetPanel";
 import { PortfolioTracker } from "@/components/dashboard/PortfolioTracker";
 import { SectorHeatmap } from "@/components/dashboard/SectorHeatmap";
+import { DateRangePickerWrapper } from "@/components/dashboard/DateRangePickerWrapper";
 import {
   BtcActivityHeatmap,
   DominanceDonut,
@@ -18,8 +19,8 @@ import {
 export default function DashboardPage() {
   return (
     <div className="space-y-4">
-      {/* KPI strip */}
-      <MarketOverviewWidget />
+      {/* Date Range Picker */}
+      <DateRangePickerWrapper />
 
       {/* Multi-asset sparkline cards */}
       <MultiAssetPanel />

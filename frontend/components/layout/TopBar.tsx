@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Activity, Bell, Search } from "lucide-react";
 import { useAlertStore } from "@/lib/stores/alertStore";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export function TopBar() {
   const unread = useAlertStore((s) => s.unread);
@@ -39,6 +40,7 @@ export function TopBar() {
           <span>Live</span>
           <span className="num-tabular text-text-primary">{now}</span>
         </div>
+        <ThemeToggle />
         <div className="relative">
           <Bell className="w-5 h-5 text-text-secondary" />
           {unread > 0 && (

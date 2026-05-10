@@ -5,6 +5,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { AlertFeed } from "@/components/alerts/AlertFeed";
 import { LiveTicker } from "@/components/alerts/LiveTicker";
 import { GlobalProviders } from "@/components/layout/GlobalProviders";
+import { ThemeInitializer } from "@/components/layout/ThemeInitializer";
 
 export const metadata: Metadata = {
   title: "World Monitor — Real-time Market Intelligence",
@@ -13,8 +14,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body className="min-h-screen">
+        <ThemeInitializer />
         <GlobalProviders>
           <div className="flex min-h-screen">
             <Sidebar />

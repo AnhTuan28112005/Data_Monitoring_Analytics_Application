@@ -105,7 +105,12 @@ export function CandlestickChart({ candles, patterns = [], height = 420 }: Props
       .map((p) => ({
         time: p.time as any,
         position: "aboveBar" as const,
-        color: p.type === "fomo" ? "#facc15" : p.type === "whale" ? "#a855f7" : "#22d3ee",
+        color:
+          p.type === "fomo" ? "#facc15" :
+          p.type === "whale" ? "#a855f7" :
+          p.type === "price_spike" ? "#ec4899" :
+          p.type === "price_drop" ? "#ef4444" :
+          "#22d3ee",
         shape: "arrowDown" as const,
         text: p.type.toUpperCase(),
       }))

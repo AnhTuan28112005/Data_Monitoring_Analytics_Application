@@ -1,7 +1,8 @@
 """Market REST endpoints — prices, OHLCV, gainers/losers, overview, heatmap."""
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -31,8 +32,10 @@ async def get_ohlcv(
     asset_class: AssetClass = Query(..., description="crypto|stock|index|gold|silver|forex"),
     timeframe: str = Query("1h"),
     limit: int = Query(200, ge=20, le=1000),
+    start_date: Optional[str] = Query(None, description="YYYY-MM-DD format"),
+    end_date: Optional[str] = Query(None, description="YYYY-MM-DD format"),
 ):
-    candles = await market_service.get_ohlcv(asset_class, symbol, timeframe, limit)
+    candles = await market_service.get_ohlcv(asset_class, symbol, timeframe, limit, start_date, end_date)
     if not candles:
         raise HTTPException(404, f"No candles for {symbol} ({asset_class}/{timeframe})")
     return OHLCVResponse(

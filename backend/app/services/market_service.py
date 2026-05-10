@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import pandas as pd
 
@@ -48,18 +48,25 @@ class MarketService:
 
     # ------------------------------------------------------------------
     async def get_ohlcv(self, asset_class: AssetClass, symbol: str,
-                        timeframe: str = "1h", limit: int = 200) -> List[Candle]:
+                        timeframe: str = "1h", limit: int = 200,
+                        start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[Candle]:
         cache_key = f"{asset_class}:{symbol}:{timeframe}"
         cached = ohlcv_cache.get(cache_key)
         if cached:
-            return [Candle(**c) for c in cached]
-
-        if asset_class == "crypto":
-            candles = await crypto_service.fetch_ohlcv(symbol, timeframe, limit)
+            candles = [Candle(**c) for c in cached]
         else:
-            candles = await yfinance_service.fetch_ohlcv(symbol, timeframe, limit)
+            if asset_class == "crypto":
+                candles = await crypto_service.fetch_ohlcv(symbol, timeframe, limit)
+            else:
+                candles = await yfinance_service.fetch_ohlcv(symbol, timeframe, limit)
+            ohlcv_cache.set(cache_key, [c.model_dump() for c in candles], ttl=30)
 
-        ohlcv_cache.set(cache_key, [c.model_dump() for c in candles], ttl=30)
+        # Filter by date range if provided
+        if start_date or end_date:
+            start_ts = datetime.strptime(start_date, "%Y-%m-%d").timestamp() if start_date else 0
+            end_ts = datetime.strptime(end_date, "%Y-%m-%d").timestamp() + 86400 if end_date else float('inf')
+            candles = [c for c in candles if start_ts <= c.time <= end_ts]
+
         return candles
 
     async def get_ohlcv_df(self, asset_class: AssetClass, symbol: str,

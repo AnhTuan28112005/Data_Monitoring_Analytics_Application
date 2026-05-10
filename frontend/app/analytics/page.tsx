@@ -169,6 +169,11 @@ function IndicatorsBlock() {
 
       <CandlestickChart candles={candles} height={360} />
 
+      <div className="mt-3 p-2 bg-bg-card/50 border border-line/40 rounded text-xs text-text-secondary">
+        <p className="text-[10px] uppercase text-text-muted mb-1">📊 Technical Analysis</p>
+        <p>Analysis for {asset.label} on {tf}. RSI 14 shows overbought/oversold levels at 70/30. MACD momentum and Bollinger Bands volatility help identify trading signals.</p>
+      </div>
+
       {closeTrace && overlayLines.length > 0 && (
         <div className="mt-3">
           <Plot
@@ -343,8 +348,9 @@ function CorrelationBlock() {
       ) : (
         <div className="text-sm text-text-muted h-72 flex items-center justify-center">Computing correlation…</div>
       )}
-      <div className="mt-2 text-[11px] text-text-muted">
-        Pearson correlation of percentage-returns over {tf === "1d" ? "90 days" : "90 hours"}.
+      <div className="mt-3 p-2 bg-bg-card/50 border border-line/40 rounded text-xs text-text-secondary">
+        <p className="text-[10px] uppercase text-text-muted mb-1">📊 Correlation Matrix</p>
+        <p>Pearson correlation (ρ) over {tf === "1d" ? "90 days" : "90 hours"}. Red = negative correlation, green = positive. Use to select uncorrelated assets for diversification.</p>
       </div>
     </Card>
   );
@@ -438,6 +444,10 @@ function IntradayBlock() {
       ) : (
         <div className="text-sm text-text-muted h-[360px] flex items-center justify-center">Loading intraday…</div>
       )}
+      <div className="mt-3 p-2 bg-bg-card/50 border border-line/40 rounded text-xs text-text-secondary">
+        <p className="text-[10px] uppercase text-text-muted mb-1">📊 Intraday Events</p>
+        <p>Intraday timeline showing pump (▲) and dump (▼) events for {asset.label}. {summary.pumps} pumps and {summary.dumps} dumps detected. Watch for rapid price movements.</p>
+      </div>
     </Card>
   );
 }

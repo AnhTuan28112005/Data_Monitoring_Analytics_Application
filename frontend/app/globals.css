@@ -4,15 +4,42 @@
 
 :root {
   color-scheme: dark;
+  --bg-base: 10 14 23;
+  --bg-panel: 15 22 35;
+  --bg-card: 19 28 44;
+  --bg-elev: 26 36 56;
+  --line: 31 42 64;
+  --text-primary: 230 237 247;
+  --text-secondary: 154 166 189;
+  --text-muted: 93 106 133;
+}
+
+html.light {
+  color-scheme: light;
+  --bg-base: 255 255 255;
+  --bg-panel: 248 249 254;
+  --bg-card: 241 245 253;
+  --bg-elev: 229 237 250;
+  --line: 210 220 240;
+  --text-primary: 15 23 42;
+  --text-secondary: 51 65 85;
+  --text-muted: 71 85 105;
 }
 
 html, body {
   height: 100%;
   background: radial-gradient(1200px 800px at 10% 0%, rgba(59,130,246,0.08), transparent 60%),
               radial-gradient(1000px 700px at 90% 20%, rgba(168,85,247,0.06), transparent 60%),
-              #0a0e17;
-  color: #e6edf7;
+              rgb(var(--bg-base));
+  color: rgb(var(--text-primary));
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html.light body {
+  background: radial-gradient(1200px 800px at 10% 0%, rgba(59,130,246,0.08), transparent 60%),
+              radial-gradient(1000px 700px at 90% 20%, rgba(168,85,247,0.04), transparent 60%),
+              rgb(var(--bg-base));
 }
 
 * {
@@ -25,7 +52,7 @@ html, body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1f2a40;
+  background: rgb(var(--line));
   border-radius: 4px;
 }
 ::-webkit-scrollbar-track {

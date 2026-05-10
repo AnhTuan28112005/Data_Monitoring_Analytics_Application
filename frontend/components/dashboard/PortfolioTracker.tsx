@@ -135,6 +135,15 @@ export function PortfolioTracker() {
           </tbody>
         </table>
       </div>
+
+      {resp && holdings.length > 0 && (
+        <div className="mt-4 p-3 bg-bg-card/50 border border-line/40 rounded-lg text-sm text-text-secondary">
+          <p className="text-xs uppercase tracking-widest text-text-muted mb-2">💡 Portfolio Summary</p>
+          <p className="leading-relaxed">
+            Your portfolio holds <span className="text-text-primary font-semibold">{holdings.length}</span> position{holdings.length !== 1 ? "s" : ""} with total value of <span className="text-text-primary font-semibold">${fmtPrice(resp.total_value)}</span>. Unrealized {resp.total_pnl_abs >= 0 ? "gain" : "loss"} is <span className={colorByChange(resp.total_pnl_abs)}>${fmtPrice(Math.abs(resp.total_pnl_abs))} ({fmtPct(resp.total_pnl_pct)})</span> against cost basis of <span className="text-text-primary font-semibold">${fmtPrice(resp.total_cost)}</span>.
+          </p>
+        </div>
+      )}
     </Card>
   );
 }

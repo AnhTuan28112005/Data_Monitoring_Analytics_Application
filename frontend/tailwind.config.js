@@ -9,16 +9,16 @@ module.exports = {
     extend: {
       colors: {
         bg: {
-          base: "#0a0e17",
-          panel: "#0f1623",
-          card: "#131c2c",
-          elev: "#1a2438",
+          base: "rgb(var(--bg-base) / <alpha-value>)",
+          panel: "rgb(var(--bg-panel) / <alpha-value>)",
+          card: "rgb(var(--bg-card) / <alpha-value>)",
+          elev: "rgb(var(--bg-elev) / <alpha-value>)",
         },
-        line: "#1f2a40",
+        line: "rgb(var(--line) / <alpha-value>)",
         text: {
-          primary: "#e6edf7",
-          secondary: "#9aa6bd",
-          muted: "#5d6a85",
+          primary: "rgb(var(--text-primary) / <alpha-value>)",
+          secondary: "rgb(var(--text-secondary) / <alpha-value>)",
+          muted: "rgb(var(--text-muted) / <alpha-value>)",
         },
         accent: {
           green: "#16c784",
