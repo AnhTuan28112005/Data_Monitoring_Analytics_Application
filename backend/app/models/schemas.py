@@ -171,3 +171,13 @@ class DailyInsight(BaseModel):
     top_gainers: List[GainerLoser]
     top_losers: List[GainerLoser]
     timestamp: datetime
+
+
+class EnhancedDailyInsight(DailyInsight):
+    market_narrative: Optional[dict] = None
+    cross_asset_insights: List[dict] = []
+    anomaly_interpretations: List[dict] = []
+    session_narratives: List[str] = []
+    weekly_summary: Optional[dict] = None
+
+
