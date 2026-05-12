@@ -29,3 +29,5 @@ python-dateutil
 pytz
 orjson
 loguru
+
+prophet
