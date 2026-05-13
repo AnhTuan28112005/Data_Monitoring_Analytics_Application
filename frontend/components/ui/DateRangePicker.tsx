@@ -12,6 +12,7 @@ export interface DateRange {
 interface DateRangePickerProps {
   onRangeChange: (range: DateRange) => void;
   defaultRange?: "1d" | "1w" | "1m" | "3m" | "6m" | "1y" | "custom";
+  hideCustom?: boolean;
 }
 
 const PRESETS = [
@@ -23,7 +24,7 @@ const PRESETS = [
   { label: "1Y", key: "1y", getDates: () => ({ startDate: subMonths(new Date(), 12), endDate: new Date() }) },
 ];
 
-export function DateRangePicker({ onRangeChange, defaultRange = "1m" }: DateRangePickerProps) {
+export function DateRangePicker({ onRangeChange, defaultRange = "1m", hideCustom = false }: DateRangePickerProps) {
   const [selected, setSelected] = useState<string>(defaultRange);
   const [showCustom, setShowCustom] = useState(false);
   const [customStart, setCustomStart] = useState(format(subMonths(new Date(), 1), "yyyy-MM-dd"));
@@ -63,20 +64,22 @@ export function DateRangePicker({ onRangeChange, defaultRange = "1m" }: DateRang
             {preset.label}
           </button>
         ))}
-        <button
-          onClick={() => {
-            setShowCustom(!showCustom);
-            if (!showCustom) setSelected("custom");
-          }}
-          className={cls(
-            "px-3 md:px-4 py-2 text-xs md:text-sm rounded-md uppercase transition-colors flex-1 md:flex-none min-w-0 font-medium",
-            selected === "custom"
-              ? "bg-accent-cyan text-bg-base font-semibold"
-              : "text-text-secondary hover:text-white border border-line/40"
-          )}
-        >
-          Custom
-        </button>
+        {!hideCustom && (
+          <button
+            onClick={() => {
+              setShowCustom(!showCustom);
+              if (!showCustom) setSelected("custom");
+            }}
+            className={cls(
+              "px-3 md:px-4 py-2 text-xs md:text-sm rounded-md uppercase transition-colors flex-1 md:flex-none min-w-0 font-medium",
+              selected === "custom"
+                ? "bg-accent-cyan text-bg-base font-semibold"
+                : "text-text-secondary hover:text-white border border-line/40"
+            )}
+          >
+            Custom
+          </button>
+        )}
       </div>
 
       {/* Custom date inputs */}

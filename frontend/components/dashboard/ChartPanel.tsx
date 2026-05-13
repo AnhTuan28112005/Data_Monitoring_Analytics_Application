@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { Card } from "@/components/ui/Card";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
@@ -46,7 +47,6 @@ export function ChartPanel() {
   const tick = useMarketStore((s) => s.ticks[`${asset.asset_class}:${asset.symbol}`]);
   const dir = useMarketStore((s) => s.lastDir[`${asset.asset_class}:${asset.symbol}`]);
 
-  // Pull pattern alerts that match the current asset, mapped to candle markers.
   const allAlerts = useAlertStore((s) => s.items);
   const patternMarkers = useMemo(() => {
     return allAlerts
@@ -98,14 +98,18 @@ export function ChartPanel() {
 
   return (
     <Card
-      title={`${asset.label} · ${tf.toUpperCase()}`}
+      title="Advanced Market Dynamics"
+      centerTitle
       action={
         <div className="flex items-center gap-3">
           {tick && (
             <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-accent-cyan bg-accent-cyan/10 px-2 py-0.5 rounded">
+                {asset.label} · {tf.toUpperCase()}
+              </span>
               <FlashNumber
                 value={tick.price}
-                className="text-base font-semibold text-text-primary"
+                className="text-base font-semibold text-text-primary ml-1"
               />
               <span className={cls("text-xs num-tabular", colorByChange(tick.change_24h_pct))}>
                 {fmtPct(tick.change_24h_pct)}
@@ -140,24 +144,30 @@ export function ChartPanel() {
             </option>
           ))}
         </select>
-        <div className="flex items-center gap-1 bg-bg-elev border border-line/60 rounded-lg p-1 flex-wrap">
-          {TIMEFRAMES.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTf(t)}
-              className={cls(
-                "px-1.5 md:px-2 py-1 text-xs rounded-md uppercase transition-colors flex-1 md:flex-none min-w-0",
-                tf === t ? "bg-accent-cyan text-bg-base font-semibold" : "text-text-secondary hover:text-white"
-              )}
-            >
-              {t}
-            </button>
-          ))}
+        <div className="flex flex-col gap-1">
+          <p className="text-[10px] text-text-muted font-medium uppercase tracking-tighter">Candle Resolution</p>
+          <div className="flex items-center gap-1 bg-bg-elev border border-line/60 rounded-lg p-1 flex-wrap">
+            {TIMEFRAMES.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTf(t)}
+                className={cls(
+                  "px-1.5 md:px-2 py-1 text-xs rounded-md uppercase transition-colors flex-1 md:flex-none min-w-0",
+                  tf === t ? "bg-accent-cyan text-bg-base font-semibold" : "text-text-secondary hover:text-white"
+                )}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <p className="text-[9px] text-text-muted italic">Displays the last 200 candles for the selected interval.</p>
         </div>
         {loading && <span className="text-xs text-text-muted">loading…</span>}
       </div>
       {error && <ErrorMessage message={error} onRetry={() => setError(null)} />}
-      {loading && !candles.length ? <SkeletonChart /> : <CandlestickChart candles={candles} patterns={patternMarkers} height={420} />}
+      <div className="mb-8 pr-10">
+        {loading && !candles.length ? <SkeletonChart /> : <CandlestickChart candles={candles} patterns={patternMarkers} height={420} />}
+      </div>
       <ChartDescription title={asset.label} candles={candles} symbol={asset.symbol} timeframe={tf} />
       <PatternBadges asset={asset} />
     </Card>

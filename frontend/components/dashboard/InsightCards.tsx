@@ -181,18 +181,6 @@ export function MarketNarrativeCard({ narrative }: { narrative: StoryBlock }) {
         )
       )}
 
-      {/* Footer: confidence + tags */}
-      <div className="flex flex-wrap items-center gap-2 pt-1">
-        <ConfidencePill confidence={narrative.confidence} />
-        {narrative.tags.map((t) => (
-          <span
-            key={t}
-            className="text-[10px] px-2 py-0.5 rounded bg-line/30 text-text-muted"
-          >
-            #{t}
-          </span>
-        ))}
-      </div>
     </div>
   );
 }

@@ -14,18 +14,18 @@ interface Asset {
 }
 
 const AVAILABLE_ASSETS: Asset[] = [
-  { symbol: "BTC/USDT", asset_class: "crypto", label: "Bitcoin (BTC)", color: "#f7931a" },
-  { symbol: "ETH/USDT", asset_class: "crypto", label: "Ethereum (ETH)", color: "#627eea" },
-  { symbol: "SOL/USDT", asset_class: "crypto", label: "Solana (SOL)", color: "#14f195" },
-  { symbol: "BNB/USDT", asset_class: "crypto", label: "Binance (BNB)", color: "#f3ba2f" },
-  { symbol: "XRP/USDT", asset_class: "crypto", label: "Ripple (XRP)", color: "#23292f" },
-  { symbol: "^GSPC", asset_class: "index", label: "S&P 500", color: "#22d3ee" },
-  { symbol: "^IXIC", asset_class: "index", label: "NASDAQ", color: "#10b981" },
-  { symbol: "^DJI", asset_class: "index", label: "Dow Jones", color: "#8b5cf6" },
-  { symbol: "GC=F", asset_class: "gold", label: "Gold", color: "#facc15" },
-  { symbol: "SI=F", asset_class: "silver", label: "Silver", color: "#d1d5db" },
-  { symbol: "EURUSD=X", asset_class: "forex", label: "EUR/USD", color: "#a855f7" },
-  { symbol: "GBPUSD=X", asset_class: "forex", label: "GBP/USD", color: "#ec4899" },
+  { symbol: "BTC/USDT", asset_class: "crypto", label: "Bitcoin (BTC)", color: "#f59e0b" },  // Amber/Orange
+  { symbol: "ETH/USDT", asset_class: "crypto", label: "Ethereum (ETH)", color: "#3b82f6" },  // Deep Blue
+  { symbol: "SOL/USDT", asset_class: "crypto", label: "Solana (SOL)", color: "#14f195" },   // Neon Green
+  { symbol: "BNB/USDT", asset_class: "crypto", label: "Binance (BNB)", color: "#facc15" },   // Bright Yellow
+  { symbol: "XRP/USDT", asset_class: "crypto", label: "Ripple (XRP)", color: "#a855f7" },    // Electric Purple
+  { symbol: "^GSPC", asset_class: "index", label: "S&P 500", color: "#22d3ee" },            // Cyan
+  { symbol: "^IXIC", asset_class: "index", label: "NASDAQ", color: "#ec4899" },             // Hot Pink
+  { symbol: "^DJI", asset_class: "index", label: "Dow Jones", color: "#f43f5e" },           // Rose Red
+  { symbol: "GC=F", asset_class: "gold", label: "Gold", color: "#d97706" },                // Deep Gold
+  { symbol: "SI=F", asset_class: "silver", label: "Silver", color: "#ffffff" },              // Pure White
+  { symbol: "EURUSD=X", asset_class: "forex", label: "EUR/USD", color: "#2dd4bf" },         // Teal
+  { symbol: "GBPUSD=X", asset_class: "forex", label: "GBP/USD", color: "#fb923c" },         // Peach
 ];
 
 export default function ComparisonPage() {
@@ -47,10 +47,10 @@ export default function ComparisonPage() {
   return (
     <div className="space-y-4">
       {/* Date Range Picker */}
-      <DateRangePickerWrapper />
+      <DateRangePickerWrapper hideCustom={true} />
 
       {/* Asset Selector */}
-      <Card title="Select Assets to Compare (2-5)">
+      <Card title="Select Assets to Compare (2-5)" centerTitle>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 md:gap-2 mb-4">
           {AVAILABLE_ASSETS.map((asset) => (
             <button
@@ -98,36 +98,30 @@ export default function ComparisonPage() {
       </Card>
 
       {/* Chart */}
-      <Card title={`Performance Comparison${selected.length > 0 ? ` (${selected.length} assets)` : ""}`}>
-        <div className="mb-3 flex items-center gap-1 md:gap-2">
-          {["1h", "4h", "1d", "1w"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setTf(t)}
-              className={`px-2 md:px-3 py-1 text-xs rounded-md uppercase transition-colors flex-1 md:flex-none ${
-                tf === t
-                  ? "bg-accent-cyan text-bg-base font-semibold"
-                  : "bg-bg-elev border border-line/60 text-text-secondary hover:text-white"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+      <Card title="Multi-Asset Comparative Performance Index" centerTitle>
         <ComparisonChart assets={selected} timeframe={tf} />
       </Card>
 
       {/* Info */}
-      <Card>
-        <div className="text-sm text-text-secondary space-y-2">
-          <p>
-            <strong>How it works:</strong> Select 2-5 assets above, then view their normalized performance
-            on the same chart. All prices are indexed to 100 at the start of the selected date range.
-          </p>
-          <p>
-            <strong>Tips:</strong> Compare different asset classes (crypto, stocks, gold, forex) to identify
-            correlations or divergences.
-          </p>
+      <Card title="User Guide & Methodology" centerTitle>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-[13px] leading-relaxed">
+          <div className="space-y-2">
+            <p className="text-text-primary font-bold uppercase text-[10px] tracking-widest text-accent-cyan">How to use Date Range</p>
+            <p className="text-text-secondary">
+              Use the global <strong>Date Range</strong> picker at the top to control the observation window. 
+              Selecting <strong>1M</strong> shows the last 30 days of performance, while <strong>1Y</strong> 
+              provides a full year of historical context. All assets are automatically aligned to start at the 
+              same timestamp within your selected range.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-text-primary font-bold uppercase text-[10px] tracking-widest text-accent-cyan">Understanding Base = 100</p>
+            <p className="text-text-secondary">
+              To compare assets with vastly different prices (e.g., Bitcoin at $60k vs S&P 500 at $5k), 
+              we use <strong>Normalization</strong>. All assets are set to a value of <strong>100</strong> at the start of the chart. 
+              If an asset's line is at 110, it means it has gained <strong>10%</strong> since the start of your selected period.
+            </p>
+          </div>
         </div>
       </Card>
     </div>

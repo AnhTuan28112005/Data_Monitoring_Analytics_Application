@@ -45,7 +45,7 @@ export function MarketOverviewWidget() {
       </div>
       {data && (
         <div className="mt-4 p-3 bg-bg-card/50 border border-line/40 rounded-lg text-sm text-text-secondary">
-          <p className="text-xs uppercase tracking-widest text-text-muted mb-2">💡 Market Summary</p>
+          <p className="text-xs uppercase tracking-widest text-text-muted mb-2">Market Summary</p>
           <p className="leading-relaxed">
             Total cryptocurrency market cap stands at <span className="text-text-primary font-semibold">${fmtNumber(data.total_market_cap)}</span> with <span className="text-text-primary font-semibold">${fmtNumber(data.total_volume_24h)}</span> in 24h trading volume. Bitcoin and Ethereum dominance at {fmtPct(data.btc_dominance, 1)} and {fmtPct(data.eth_dominance, 1)} respectively indicate {(data.btc_dominance > 50 ? "strong" : "weak")} Bitcoin leadership.
           </p>

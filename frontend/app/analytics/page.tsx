@@ -3,16 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Card } from "@/components/ui/Card";
-import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { api } from "@/lib/api";
 import type {
   AssetClass,
   Candle,
-  CorrelationResponse,
   IndicatorResponse,
-  IntradayResponse,
 } from "@/lib/types";
-import { cls, colorByChange, fmtPct } from "@/lib/utils";
+import { cls } from "@/lib/utils";
 
 const Plot = dynamic(() => import("@/components/charts/PlotlyClient"), { ssr: false });
 
@@ -41,8 +38,6 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-4">
       <IndicatorsBlock />
-      <CorrelationBlock />
-      <IntradayBlock />
     </div>
   );
 }
@@ -116,62 +111,96 @@ function IndicatorsBlock() {
 
   return (
     <Card title="Technical Indicators">
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        <select
-          value={`${asset.asset_class}:${asset.symbol}`}
-          onChange={(e) => {
-            const [ac, sym] = e.target.value.split(":");
-            const f = ASSETS.find((a) => a.asset_class === ac && a.symbol === sym);
-            if (f) setAsset(f);
-          }}
-          className="bg-bg-elev border border-line/60 rounded-lg px-2 py-1.5 text-sm"
-        >
-          {ASSETS.map((a) => (
-            <option key={`${a.asset_class}:${a.symbol}`} value={`${a.asset_class}:${a.symbol}`}>{a.label}</option>
-          ))}
-        </select>
-        <div className="flex items-center gap-1 bg-bg-elev border border-line/60 rounded-lg p-1">
-          {TIMEFRAMES.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTf(t)}
-              className={cls(
-                "px-2 py-1 text-xs uppercase rounded-md",
-                tf === t ? "bg-accent-cyan text-bg-base font-semibold" : "text-text-secondary hover:text-white"
-              )}
-            >
-              {t}
-            </button>
-          ))}
+      <div className="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b border-line/20">
+        <div className="flex flex-col gap-1">
+          <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Target Asset</p>
+          <select
+            value={`${asset.asset_class}:${asset.symbol}`}
+            onChange={(e) => {
+              const [ac, sym] = e.target.value.split(":");
+              const f = ASSETS.find((a) => a.asset_class === ac && a.symbol === sym);
+              if (f) setAsset(f);
+            }}
+            className="bg-bg-elev border border-line/60 rounded-lg px-2 py-1.5 text-sm"
+          >
+            {ASSETS.map((a) => (
+              <option key={`${a.asset_class}:${a.symbol}`} value={`${a.asset_class}:${a.symbol}`}>{a.label}</option>
+            ))}
+          </select>
+          <p className="text-[9px] text-text-muted italic">Select instrument for technical study.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 ml-auto">
-          {INDICATORS.map((i) => {
-            const on = enabled.includes(i.id);
-            return (
+
+        <div className="flex flex-col gap-1">
+          <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Resolution</p>
+          <div className="flex items-center gap-1 bg-bg-elev border border-line/60 rounded-lg p-1">
+            {TIMEFRAMES.map((t) => (
               <button
-                key={i.id}
-                onClick={() =>
-                  setEnabled(on ? enabled.filter((x) => x !== i.id) : [...enabled, i.id])
-                }
+                key={t}
+                onClick={() => setTf(t)}
                 className={cls(
-                  "text-[11px] px-2 py-1 rounded-md border",
-                  on
-                    ? "bg-accent-cyan/15 border-accent-cyan/40 text-accent-cyan"
-                    : "border-line/60 text-text-secondary hover:text-white"
+                  "px-2 py-1 text-xs uppercase rounded-md",
+                  tf === t ? "bg-accent-cyan text-bg-base font-semibold" : "text-text-secondary hover:text-white"
                 )}
               >
-                {i.label}
+                {t}
               </button>
-            );
-          })}
+            ))}
+          </div>
+          <p className="text-[9px] text-text-muted italic">Time interval per data point.</p>
         </div>
-      </div>
 
-      <CandlestickChart candles={candles} height={360} />
+        <div className="flex flex-col gap-1 flex-1 min-w-[300px]">
+          <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Analysis Engine</p>
+          <div className="flex flex-col gap-4 w-full">
+            {/* Group 1: Overlays */}
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-[9px] font-bold uppercase tracking-tighter text-accent-cyan">Price Overlays (USD)</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {INDICATORS.slice(0, 3).map((i) => {
+                  const on = enabled.includes(i.id);
+                  return (
+                    <button
+                      key={i.id}
+                      onClick={() => setEnabled(on ? enabled.filter((x) => x !== i.id) : [...enabled, i.id])}
+                      className={cls(
+                        "text-[10px] px-2 py-0.5 rounded border transition-all",
+                        on ? "bg-accent-cyan/15 border-accent-cyan/40 text-accent-cyan" : "border-line/60 text-text-secondary hover:text-white"
+                      )}
+                    >
+                      {i.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-      <div className="mt-3 p-2 bg-bg-card/50 border border-line/40 rounded text-xs text-text-secondary">
-        <p className="text-[10px] uppercase text-text-muted mb-1">📊 Technical Analysis</p>
-        <p>Analysis for {asset.label} on {tf}. RSI 14 shows overbought/oversold levels at 70/30. MACD momentum and Bollinger Bands volatility help identify trading signals.</p>
+            {/* Group 2: Oscillators */}
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-[9px] font-bold uppercase tracking-tighter text-accent-purple">Oscillators (% / Index)</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {INDICATORS.slice(3).map((i) => {
+                  const on = enabled.includes(i.id);
+                  return (
+                    <button
+                      key={i.id}
+                      onClick={() => setEnabled(on ? enabled.filter((x) => x !== i.id) : [...enabled, i.id])}
+                      className={cls(
+                        "text-[10px] px-2 py-0.5 rounded border transition-all",
+                        on ? "bg-accent-purple/15 border-accent-purple/40 text-accent-purple" : "border-line/60 text-text-secondary hover:text-white"
+                      )}
+                    >
+                      {i.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {closeTrace && overlayLines.length > 0 && (
@@ -179,25 +208,26 @@ function IndicatorsBlock() {
           <Plot
             data={[closeTrace, ...overlayLines]}
             layout={{
-              margin: { t: 10, l: 40, r: 20, b: 30 },
+              title: { text: `${asset.label} Price & Overlays`, font: { size: 14, color: "#e6edf7" }, x: 0.05 },
+              margin: { t: 40, l: 60, r: 20, b: 50 },
               paper_bgcolor: "transparent",
               plot_bgcolor: "transparent",
               font: { color: "#e6edf7", size: 11 },
-              legend: { orientation: "h", y: -0.18 },
-              xaxis: { gridcolor: "rgba(31,42,64,0.5)" },
-              yaxis: { gridcolor: "rgba(31,42,64,0.5)" },
-              height: 240,
+              legend: { orientation: "h", y: -0.2 },
+              xaxis: { title: { text: "Timeline", font: { size: 10, color: "#9aa6bd" } }, gridcolor: "rgba(31,42,64,0.3)" },
+              yaxis: { title: { text: "Price (USD)", font: { size: 10, color: "#9aa6bd" }, standoff: 15 }, gridcolor: "rgba(31,42,64,0.3)" },
+              height: 400,
               autosize: true,
             }}
             config={{ displayModeBar: false, responsive: true }}
-            style={{ width: "100%", height: "240px" }}
+            style={{ width: "100%", height: "400px" }}
             useResizeHandler
           />
         </div>
       )}
 
       {oscillators && (oscillators.rsi || oscillators.macd || oscillators.atr || oscillators.vol) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
           {oscillators.rsi && (
             <Plot
               data={[
@@ -211,9 +241,9 @@ function IndicatorsBlock() {
                 { type: "scatter", mode: "lines", x: oscillators.times, y: oscillators.times.map(() => 30),
                   line: { color: "rgba(22,199,132,0.5)", width: 1, dash: "dot" }, showlegend: false },
               ]}
-              layout={subLayout("RSI 14")}
+              layout={subLayout("Relative Strength Index (RSI 14)", "Index (0-100)")}
               config={{ displayModeBar: false, responsive: true }}
-              style={{ width: "100%", height: "180px" }}
+              style={{ width: "100%", height: "220px" }}
               useResizeHandler
             />
           )}
@@ -228,9 +258,9 @@ function IndicatorsBlock() {
                 { type: "scatter", mode: "lines", x: oscillators.times, y: oscillators.macdSignal?.values ?? [],
                   line: { color: "#a855f7", width: 1.6 }, name: "Signal" },
               ]}
-              layout={subLayout("MACD")}
+              layout={subLayout("MACD Momentum", "Strength")}
               config={{ displayModeBar: false, responsive: true }}
-              style={{ width: "100%", height: "180px" }}
+              style={{ width: "100%", height: "220px" }}
               useResizeHandler
             />
           )}
@@ -240,9 +270,9 @@ function IndicatorsBlock() {
                 type: "scatter", mode: "lines", x: oscillators.times, y: oscillators.atr.values,
                 line: { color: "#3b82f6", width: 1.6 }, name: "ATR(14)",
               }]}
-              layout={subLayout("ATR 14")}
+              layout={subLayout("Average True Range (Volatility)", "ATR Value")}
               config={{ displayModeBar: false, responsive: true }}
-              style={{ width: "100%", height: "180px" }}
+              style={{ width: "100%", height: "220px" }}
               useResizeHandler
             />
           )}
@@ -253,201 +283,89 @@ function IndicatorsBlock() {
                 line: { color: "#16c784", width: 1.6 }, name: "Volatility %", fill: "tozeroy",
                 fillcolor: "rgba(22,199,132,0.15)",
               }]}
-              layout={subLayout("Volatility (rolling)")}
+              layout={subLayout("Price Volatility (%)", "Percentage (%)")}
               config={{ displayModeBar: false, responsive: true }}
-              style={{ width: "100%", height: "180px" }}
+              style={{ width: "100%", height: "220px" }}
               useResizeHandler
             />
           )}
         </div>
       )}
+
+      <div className="mt-8 p-4 bg-bg-card/50 border border-line/40 rounded-xl">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-accent-cyan font-bold uppercase text-[10px] tracking-widest">Dynamic Strategy & Signals</span>
+        </div>
+        <div className="space-y-3">
+          <ul className="list-disc list-inside space-y-2">
+            {(() => {
+              if (!ind || !enabled.length) return <li className="text-[13px] text-text-muted italic list-none">Select technical indicators above to generate a dynamic trading strategy.</li>;
+              
+              let fragments: string[] = [];
+              const named = (n: string) => ind.series.find((s) => s.name === n);
+              const last = (s: any) => s?.values[s.values.length - 1];
+
+              if (enabled.includes("sma20")) {
+                const sma = last(named("SMA20"));
+                const price = candles[candles.length - 1]?.close;
+                fragments.push(price > sma 
+                  ? `Bullish Momentum: Price is above SMA 20 ($${sma?.toFixed(2)}). ➜ Strategy: Maintain long positions but monitor for mean reversion.` 
+                  : `Minor Correction: Price has dipped below SMA 20 ($${sma?.toFixed(2)}). ➜ Strategy: Wait for a recovery above SMA or look for support at lower levels.`);
+              }
+
+              if (enabled.includes("ema50")) {
+                const ema = last(named("EMA50"));
+                const bullish = candles[candles.length - 1]?.close > ema;
+                fragments.push(`Trend Analysis: EMA 50 is acting as dynamic ${bullish ? "support" : "resistance"} at $${ema?.toFixed(2)}. ➜ Strategy: ${bullish ? "Look for buying opportunities near this line." : "Be cautious as the mid-term trend is currently bearish."}`);
+              }
+
+              if (enabled.includes("bbands")) {
+                fragments.push("Volatility Check: Price is interacting with Bollinger Bands. ➜ Strategy: Watch for 'band walking' in strong trends or reversals if price touches the outer bands.");
+              }
+
+              if (enabled.includes("rsi")) {
+                const val = last(named("RSI14"));
+                if (val > 70) fragments.push(`RSI Alert (${val?.toFixed(1)}): Market is in Overbought territory. ➜ Strategy: Consider partial profit-taking or avoid new long entries.`);
+                else if (val < 30) fragments.push(`RSI Alert (${val?.toFixed(1)}): Market is in Oversold territory. ➜ Strategy: Look for signs of bullish reversal for potential recovery entries.`);
+                else fragments.push(`RSI Neutral: Current strength (${val?.toFixed(1)}) is balanced. ➜ Strategy: Wait for RSI to break 50 or reach extreme levels for better signal conviction.`);
+              }
+
+              if (enabled.includes("macd")) {
+                const macd = last(named("MACD"));
+                const signal = last(named("MACD_SIGNAL"));
+                fragments.push(macd > signal 
+                  ? "MACD Signal: Bullish crossover confirmed with positive momentum. ➜ Strategy: Ride the trend until the histogram begins to fade." 
+                  : "MACD Signal: Bearish momentum or weakening trend detected. ➜ Strategy: Reduce exposure or wait for a fresh bullish crossover.");
+              }
+
+              if (enabled.includes("volatility")) {
+                const v = last(named("VOLATILITY"));
+                fragments.push(`Risk Level: Volatility is at ${v?.toFixed(2)}% (${v > 2 ? "High Instability" : "Stable"}). ➜ Strategy: ${v > 2 ? "Tighten stop-losses and reduce position sizing." : "Normal position sizing can be maintained."}`);
+              }
+
+              return fragments.map((f, i) => (
+                <li key={i} className="text-[13px] text-text-primary leading-relaxed marker:text-accent-cyan">
+                  {f}
+                </li>
+              ));
+            })()}
+          </ul>
+        </div>
+      </div>
     </Card>
   );
 }
 
-function subLayout(title: string): any {
+function subLayout(title: string, ytitle: string): any {
   return {
-    title: { text: title, font: { size: 12, color: "#9aa6bd" }, x: 0.02 },
-    margin: { t: 30, l: 40, r: 10, b: 25 },
+    title: { text: title, font: { size: 12, color: "#e6edf7" }, x: 0.02 },
+    margin: { t: 35, l: 50, r: 10, b: 40 },
     paper_bgcolor: "transparent",
     plot_bgcolor: "transparent",
     font: { color: "#e6edf7", size: 10 },
-    xaxis: { gridcolor: "rgba(31,42,64,0.5)" },
-    yaxis: { gridcolor: "rgba(31,42,64,0.5)" },
+    xaxis: { title: { text: "Timeline", font: { size: 9, color: "#9aa6bd" } }, gridcolor: "rgba(31,42,64,0.3)" },
+    yaxis: { title: { text: ytitle, font: { size: 9, color: "#9aa6bd" }, standoff: 10 }, gridcolor: "rgba(31,42,64,0.3)" },
     autosize: true,
     showlegend: false,
   };
-}
-
-// =============================================================
-function CorrelationBlock() {
-  const [data, setData] = useState<CorrelationResponse | null>(null);
-  const [tf, setTf] = useState("1d");
-
-  const pairs = useMemo(
-    () => [
-      "crypto:BTC/USDT", "crypto:ETH/USDT", "crypto:SOL/USDT",
-      "index:^GSPC", "index:^IXIC",
-      "gold:GC=F", "silver:SI=F",
-      "forex:EURUSD=X",
-    ],
-    []
-  );
-
-  useEffect(() => {
-    api.correlation(pairs, tf, 90).then(setData).catch(() => {});
-  }, [pairs, tf]);
-
-  return (
-    <Card
-      title="Correlation Matrix"
-      action={
-        <div className="flex items-center gap-1 bg-bg-elev border border-line/60 rounded-lg p-1">
-          {["1h", "1d"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setTf(t)}
-              className={cls(
-                "px-2 py-1 text-xs uppercase rounded-md",
-                tf === t ? "bg-accent-cyan text-bg-base font-semibold" : "text-text-secondary hover:text-white"
-              )}
-            >{t}</button>
-          ))}
-        </div>
-      }
-    >
-      {data && data.symbols.length > 0 ? (
-        <Plot
-          data={[{
-            type: "heatmap",
-            z: data.matrix,
-            x: data.symbols,
-            y: data.symbols,
-            zmin: -1, zmax: 1, zmid: 0,
-            colorscale: [
-              [0, "#ea3943"],
-              [0.5, "#1a2438"],
-              [1, "#16c784"],
-            ],
-            hovertemplate: "%{y} ↔ %{x}<br>ρ = %{z:.3f}<extra></extra>",
-            colorbar: { title: "ρ", thickness: 12, tickfont: { color: "#9aa6bd" } },
-          }]}
-          layout={{
-            margin: { t: 10, l: 110, r: 10, b: 90 },
-            paper_bgcolor: "transparent",
-            plot_bgcolor: "transparent",
-            font: { color: "#e6edf7", size: 11 },
-            xaxis: { tickangle: -35 },
-            height: 480,
-            autosize: true,
-          }}
-          config={{ displayModeBar: false, responsive: true }}
-          style={{ width: "100%", height: "480px" }}
-          useResizeHandler
-        />
-      ) : (
-        <div className="text-sm text-text-muted h-72 flex items-center justify-center">Computing correlation…</div>
-      )}
-      <div className="mt-3 p-2 bg-bg-card/50 border border-line/40 rounded text-xs text-text-secondary">
-        <p className="text-[10px] uppercase text-text-muted mb-1">📊 Correlation Matrix</p>
-        <p>Pearson correlation (ρ) over {tf === "1d" ? "90 days" : "90 hours"}. Red = negative correlation, green = positive. Use to select uncorrelated assets for diversification.</p>
-      </div>
-    </Card>
-  );
-}
-
-// =============================================================
-function IntradayBlock() {
-  const [asset, setAsset] = useState(ASSETS[0]);
-  const [data, setData] = useState<IntradayResponse | null>(null);
-
-  useEffect(() => {
-    api.intraday(asset.asset_class, asset.symbol).then(setData).catch(() => {});
-  }, [asset]);
-
-  const traces = useMemo(() => {
-    if (!data || data.points.length === 0) return null;
-    const x = data.points.map((p) => new Date(p.time * 1000));
-    const price = data.points.map((p) => p.price);
-    const pumps = data.points.filter((p) => p.event === "pump");
-    const dumps = data.points.filter((p) => p.event === "dump");
-
-    return [
-      {
-        type: "scatter" as const, mode: "lines" as const, name: "Price",
-        x, y: price, line: { color: "#22d3ee", width: 1.6 },
-      },
-      {
-        type: "scatter" as const, mode: "markers" as const, name: "Pump",
-        x: pumps.map((p) => new Date(p.time * 1000)),
-        y: pumps.map((p) => p.price),
-        marker: { color: "#16c784", size: 9, symbol: "triangle-up" },
-      },
-      {
-        type: "scatter" as const, mode: "markers" as const, name: "Dump",
-        x: dumps.map((p) => new Date(p.time * 1000)),
-        y: dumps.map((p) => p.price),
-        marker: { color: "#ea3943", size: 9, symbol: "triangle-down" },
-      },
-    ];
-  }, [data]);
-
-  const summary = useMemo(() => {
-    if (!data) return { pumps: 0, dumps: 0 };
-    return {
-      pumps: data.points.filter((p) => p.event === "pump").length,
-      dumps: data.points.filter((p) => p.event === "dump").length,
-    };
-  }, [data]);
-
-  return (
-    <Card
-      title="Intraday Timeline"
-      action={
-        <div className="flex items-center gap-3">
-          <select
-            value={`${asset.asset_class}:${asset.symbol}`}
-            onChange={(e) => {
-              const [ac, sym] = e.target.value.split(":");
-              const f = ASSETS.find((a) => a.asset_class === ac && a.symbol === sym);
-              if (f) setAsset(f);
-            }}
-            className="bg-bg-elev border border-line/60 rounded-lg px-2 py-1.5 text-sm"
-          >
-            {ASSETS.map((a) => (
-              <option key={`${a.asset_class}:${a.symbol}`} value={`${a.asset_class}:${a.symbol}`}>{a.label}</option>
-            ))}
-          </select>
-          <span className="text-xs text-accent-green num-tabular">{summary.pumps} pumps</span>
-          <span className="text-xs text-accent-red num-tabular">{summary.dumps} dumps</span>
-        </div>
-      }
-    >
-      {traces ? (
-        <Plot
-          data={traces}
-          layout={{
-            margin: { t: 10, l: 40, r: 20, b: 30 },
-            paper_bgcolor: "transparent",
-            plot_bgcolor: "transparent",
-            font: { color: "#e6edf7", size: 11 },
-            xaxis: { gridcolor: "rgba(31,42,64,0.5)" },
-            yaxis: { gridcolor: "rgba(31,42,64,0.5)" },
-            legend: { orientation: "h", y: -0.18 },
-            height: 360,
-            autosize: true,
-          }}
-          config={{ displayModeBar: false, responsive: true }}
-          style={{ width: "100%", height: "360px" }}
-          useResizeHandler
-        />
-      ) : (
-        <div className="text-sm text-text-muted h-[360px] flex items-center justify-center">Loading intraday…</div>
-      )}
-      <div className="mt-3 p-2 bg-bg-card/50 border border-line/40 rounded text-xs text-text-secondary">
-        <p className="text-[10px] uppercase text-text-muted mb-1">📊 Intraday Events</p>
-        <p>Intraday timeline showing pump (▲) and dump (▼) events for {asset.label}. {summary.pumps} pumps and {summary.dumps} dumps detected. Watch for rapid price movements.</p>
-      </div>
-    </Card>
-  );
 }

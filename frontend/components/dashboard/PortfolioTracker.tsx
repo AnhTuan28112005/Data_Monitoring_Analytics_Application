@@ -16,7 +16,6 @@ export function PortfolioTracker() {
   const ticks = useMarketStore((s) => s.ticks);
   const [resp, setResp] = useState<PortfolioResponse | null>(null);
 
-  // Recompute PnL whenever holdings or live prices change.
   useEffect(() => {
     let alive = true;
     api
@@ -138,10 +137,53 @@ export function PortfolioTracker() {
 
       {resp && holdings.length > 0 && (
         <div className="mt-4 p-3 bg-bg-card/50 border border-line/40 rounded-lg text-sm text-text-secondary">
-          <p className="text-xs uppercase tracking-widest text-text-muted mb-2">💡 Portfolio Summary</p>
-          <p className="leading-relaxed">
+          <p className="text-xs uppercase tracking-widest text-text-muted mb-2">Portfolio Summary</p>
+          <p className="leading-relaxed border-b border-line/20 pb-3 mb-3">
             Your portfolio holds <span className="text-text-primary font-semibold">{holdings.length}</span> position{holdings.length !== 1 ? "s" : ""} with total value of <span className="text-text-primary font-semibold">${fmtPrice(resp.total_value)}</span>. Unrealized {resp.total_pnl_abs >= 0 ? "gain" : "loss"} is <span className={colorByChange(resp.total_pnl_abs)}>${fmtPrice(Math.abs(resp.total_pnl_abs))} ({fmtPct(resp.total_pnl_pct)})</span> against cost basis of <span className="text-text-primary font-semibold">${fmtPrice(resp.total_cost)}</span>.
           </p>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-accent-cyan font-bold uppercase text-[10px] tracking-widest">Strategy & Intelligence</span>
+            </div>
+            <p className="text-[13px] text-text-primary leading-relaxed">
+              {(() => {
+                const items = resp.holdings.map((h, i) => ({ ...h, symbol: holdings[i].symbol, class: holdings[i].asset_class })).sort((a, b) => b.pnl_pct - a.pnl_pct);
+                const best = items[0];
+                const worst = items[items.length - 1];
+                
+                const classTotals: Record<string, number> = {};
+                items.forEach(it => {
+                  classTotals[it.class] = (classTotals[it.class] || 0) + it.value;
+                });
+                const topClass = Object.entries(classTotals).sort((a, b) => b[1] - a[1])[0];
+                const concentration = (topClass[1] / resp.total_value) * 100;
+
+                let insight = "";
+                if (concentration > 60) {
+                  insight += `High ${topClass[0].toUpperCase()} concentration detected (${concentration.toFixed(1)}%). Consider diversifying to reduce systemic risk. `;
+                }
+
+                if (best.pnl_pct > 10) {
+                  insight += `${best.symbol} is current performance leader (+${best.pnl_pct.toFixed(1)}%). Protect gains as the trend matures. `;
+                }
+
+                if (worst.pnl_pct < -15) {
+                  insight += `${worst.symbol} is significantly lagging (${worst.pnl_pct.toFixed(1)}% loss). Evaluate if the thesis remains intact. `;
+                }
+
+                if (resp.total_pnl_pct < -5) {
+                  insight += "Defensive stance recommended. Focus on capital preservation and avoid increasing exposure to losing trends.";
+                } else if (resp.total_pnl_pct > 5) {
+                  insight += "Overall portfolio health is strong. Maintain disciplined position sizing while riding the positive momentum.";
+                } else {
+                  insight += "Portfolio is in a neutral consolidation phase. Monitor for the next major trend breakout to adjust exposure.";
+                }
+
+                return insight;
+              })()}
+            </p>
+          </div>
         </div>
       )}
     </Card>

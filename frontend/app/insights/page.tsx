@@ -480,7 +480,7 @@ export default function InsightsPage() {
                   <AnomalyInterpretationCard
                     key={i}
                     interpretation={interp}
-                    rawAnomaly={raw}
+                    rawAnomaly={raw as any}
                   />
                 );
               })}

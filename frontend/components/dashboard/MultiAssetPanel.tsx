@@ -74,7 +74,7 @@ export function MultiAssetPanel() {
   }, [dateRange]);
 
   return (
-    <Card title="Multi-Asset Panel">
+    <Card title="Multi-Asset Panel" subtitle="Real-time performance tracking for representative assets across Crypto, Equities, Forex, and Commodities.">
       {error && <ErrorMessage message={error} onRetry={() => setError(null)} title="Multi-asset loading error" />}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {items.map((it) => (
@@ -95,7 +95,7 @@ export function MultiAssetPanel() {
       </div>
       {items.length > 0 && (
         <div className="mt-4 p-3 bg-bg-card/50 border border-line/40 rounded-lg text-sm text-text-secondary">
-          <p className="text-xs uppercase tracking-widest text-text-muted mb-2">💡 Portfolio Summary</p>
+          <p className="text-xs uppercase tracking-widest text-text-muted mb-2">Portfolio Summary</p>
           <p className="leading-relaxed">
             Monitoring {items.length} key assets in your portfolio. Current total portfolio value:{" "}
             <span className="text-text-primary font-semibold">

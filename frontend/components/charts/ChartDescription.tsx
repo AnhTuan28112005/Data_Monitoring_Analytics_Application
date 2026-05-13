@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { Candle } from "@/lib/types";
-import { fmtPrice, fmtPct } from "@/lib/utils";
+import { fmtPrice, fmtPct, cls } from "@/lib/utils";
 
 interface ChartDescriptionProps {
   title: string;
@@ -36,20 +36,29 @@ export function ChartDescription({ title, candles, symbol, timeframe }: ChartDes
   }, [candles]);
 
   return (
-    <div className="mt-4 p-3 bg-bg-card/50 border border-line/40 rounded-lg text-sm text-text-secondary">
-      <p className="text-xs uppercase tracking-widest text-text-muted mb-2">💡 Chart Summary</p>
-      <p className="leading-relaxed">
-        <strong>{title}</strong> ({symbol.toUpperCase()}) is currently trading at{" "}
-        <span className="text-text-primary font-semibold">{fmtPrice(stats.current)}</span> on a {timeframe}{" "}
-        timeframe. The price has{" "}
-        <span className={stats.change >= 0 ? "text-accent-green" : "text-accent-red"}>
-          {stats.change >= 0 ? "increased" : "decreased"} by {fmtPrice(Math.abs(stats.change))} (
-          {fmtPct(stats.changePct)})
-        </span>{" "}
-        from the opening level. Trading range: <span className="text-text-primary">{fmtPrice(stats.high)}</span> (high)
-        to <span className="text-text-primary">{fmtPrice(stats.low)}</span> (low). Total trading volume:{" "}
-        <span className="text-text-primary">{(stats.volume / 1e6).toFixed(2)}M</span>.
-      </p>
+    <div className="mt-4 p-3 bg-bg-card/50 border border-line/40 rounded-lg text-[13px] text-text-primary leading-relaxed min-h-[150px] flex flex-col justify-between">
+      <div>
+        <div className="flex items-center gap-2 mb-3 border-b border-line/20 pb-2">
+          <span className={cls("w-1.5 h-1.5 rounded-full animate-pulse", stats.change >= 0 ? "bg-accent-green" : "bg-accent-red")} />
+          <p className="uppercase tracking-widest text-[10px] text-text-muted font-bold">Technical Performance Summary</p>
+        </div>
+        <p>
+          <span className="text-text-primary font-bold">{title}</span> currently maintains a position at{" "}
+          <span className="text-accent-cyan font-bold">{fmtPrice(stats.current)}</span>. Within this session, price action reflects a{" "}
+          <span className={cls("font-bold", stats.change >= 0 ? "text-accent-green" : "text-accent-red")}>
+            {stats.changePct.toFixed(2)}% {stats.change >= 0 ? "expansion" : "contraction"}
+          </span>{" "}
+          relative to the period open. Session liquidity reached <span className="text-text-primary font-bold">{(stats.volume / 1e6).toFixed(2)}M</span> units, with high/low volatility bounds established at <span className="text-text-primary font-bold">{fmtPrice(stats.high)}</span> and <span className="text-text-primary font-bold">{fmtPrice(stats.low)}</span>.
+        </p>
+      </div>
+      <div className="mt-3 pt-3 border-t border-line/30">
+        <p className="text-[13px] text-text-primary leading-relaxed">
+          <span className="text-accent-cyan font-bold uppercase text-[10px] mr-2">Strategy:</span> 
+          {stats.change >= 0 
+            ? `Bullish momentum is expanding for ${title}. Consider tightening stop-losses to protect current gains and watch for potential resistance near the session high of ${fmtPrice(stats.high)} as the asset approaches overbought territory.` 
+            : `Market contraction detected for ${title}. Strategy: Monitor for potential support near the session low of ${fmtPrice(stats.low)}. Avoid aggressive long entries until a clear reversal pattern is confirmed on shorter timeframes.`}
+        </p>
+      </div>
     </div>
   );
 }

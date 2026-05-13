@@ -6,7 +6,7 @@ import { PortfolioTracker } from "@/components/dashboard/PortfolioTracker";
 import { SectorHeatmap } from "@/components/dashboard/SectorHeatmap";
 import { DateRangePickerWrapper } from "@/components/dashboard/DateRangePickerWrapper";
 import {
-  BtcActivityHeatmap,
+  CorrelationHeatmap,
   DominanceDonut,
   FearGreedGauge,
   PerformanceComparison,
@@ -25,45 +25,29 @@ export default function DashboardPage() {
       {/* Multi-asset sparkline cards */}
       <MultiAssetPanel />
 
-      {/* 4 headline mini-charts (Fear&Greed · Dominance · Volume · Returns) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* 4 headline mini-charts (Market Sentiment · Allocation · Liquidity · Volatility) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FearGreedGauge />
         <DominanceDonut />
         <VolumeByAssetClass />
         <ReturnsDistribution />
       </div>
 
-      {/* Main candlestick + gainers / losers */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2">
-          <ChartPanel />
-        </div>
-        <div>
-          <GainersLosers />
-        </div>
-      </div>
+      {/* Main candlestick chart (Full Width) */}
+      <ChartPanel />
 
-      {/* Cross-asset performance + volatility radar */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2">
-          <PerformanceComparison />
-        </div>
-        <div>
-          <VolatilityRadar />
-        </div>
-      </div>
+      {/* Gainers / Losers (Full Width below chart) */}
+      <GainersLosers />
 
-      {/* Top-10 market cap + BTC hourly heatmap */}
+      {/* Volatility Radar (Full Width) */}
+      <VolatilityRadar />
+
+      {/* Top-10 market cap + Correlation heatmap */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <TopMarketCap />
-        <BtcActivityHeatmap />
+        <CorrelationHeatmap />
       </div>
 
-      {/* Sector treemap full-width */}
-      <SectorHeatmap />
-
-      {/* Portfolio */}
-      <PortfolioTracker />
     </div>
   );
 }

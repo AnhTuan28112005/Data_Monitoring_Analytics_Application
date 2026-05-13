@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/Card";
 import dynamic from "next/dynamic";
 import type { HeatmapResponse } from "@/lib/types";
 
-const Plot = dynamic(() => import("@/components/charts/PlotlyClient"), { ssr: false });
+import Plot from "@/components/charts/PlotlyClient";
 
 export function SectorHeatmap() {
   const [data, setData] = useState<HeatmapResponse | null>(null);
@@ -60,10 +60,10 @@ export function SectorHeatmap() {
     };
   }, [data]);
 
-  const bestSector = data?.cells.length ? data.cells.reduce((best, cell) =>
+  const bestSector = (data && data.cells.length > 0) ? data.cells.reduce((best, cell) =>
     cell.change_pct > best.change_pct ? cell : best
   ) : null;
-  const worstSector = data?.cells.length ? data.cells.reduce((worst, cell) =>
+  const worstSector = (data && data.cells.length > 0) ? data.cells.reduce((worst, cell) =>
     cell.change_pct < worst.change_pct ? cell : worst
   ) : null;
 
@@ -86,7 +86,7 @@ export function SectorHeatmap() {
             useResizeHandler
           />
           <div className="mt-3 p-2 bg-bg-card/50 border border-line/40 rounded text-xs text-text-secondary">
-            <p className="text-[10px] uppercase text-text-muted mb-1">📊 Sector Analysis</p>
+            <p className="text-[10px] uppercase text-text-muted mb-1">Sector Analysis</p>
             <p>Cryptocurrency sector performance visualized by size and color. {bestSector && <span>Best: <span className="text-accent-green font-semibold">{bestSector.symbol}</span> at {bestSector.change_pct.toFixed(2)}%</span>}. {worstSector && <span>Worst: <span className="text-accent-red font-semibold">{worstSector.symbol}</span> at {worstSector.change_pct.toFixed(2)}%</span>}.</p>
           </div>
         </>

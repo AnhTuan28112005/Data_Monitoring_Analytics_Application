@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 import ccxt
+import httpx
 import pandas as pd
 from loguru import logger
 from pycoingecko import CoinGeckoAPI
@@ -86,7 +87,35 @@ class CryptoService:
                 )
             except Exception:
                 continue
+        
+        # Enrich with market cap from CoinGecko (with simple cache)
+        now = datetime.now(timezone.utc)
+        if not hasattr(self, "_mcap_cache") or (now - self._mcap_last_update).total_seconds() > 300:
+            try:
+                cg_data = await self._fallback_cg_tickers(symbols)
+                self._mcap_cache = {t.symbol: t.market_cap for t in cg_data if t.market_cap}
+                self._mcap_last_update = now
+            except Exception as exc:
+                logger.warning(f"Failed to enrich tickers with market cap: {exc}")
+        
+        if hasattr(self, "_mcap_cache"):
+            for t in out:
+                if t.symbol in self._mcap_cache:
+                    t.market_cap = self._mcap_cache[t.symbol]
+
         return out
+
+    async def fetch_fear_greed(self) -> Optional[int]:
+        """Fetch current crypto Fear & Greed index from alternative.me."""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get("https://api.alternative.me/fng/?limit=1")
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return int(data["data"][0]["value"])
+        except Exception as exc:
+            logger.warning(f"Failed to fetch Fear & Greed index: {exc}")
+        return None
 
     async def _fallback_cg_tickers(self, symbols: List[str]) -> List[PriceTick]:
         ids = [self._symbol_to_cg.get(s) for s in symbols if self._symbol_to_cg.get(s)]
@@ -156,23 +185,56 @@ class CryptoService:
 
     # ------------------------------------------------------------------
     async def market_overview(self) -> MarketOverview:
-        try:
-            global_data = await asyncio.to_thread(self._cg.get_global)
-            d = global_data["data"] if "data" in global_data else global_data
-            total_mcap = float(d["total_market_cap"]["usd"])
-            total_vol = float(d["total_volume"]["usd"])
-            btc_dom = float(d["market_cap_percentage"].get("btc", 0.0))
-            eth_dom = float(d["market_cap_percentage"].get("eth", 0.0))
-        except Exception as exc:
-            logger.warning(f"CoinGecko global failed: {exc}")
-            total_mcap = total_vol = btc_dom = eth_dom = 0.0
+        now = datetime.now(timezone.utc)
+        
+        # 1. Try to get cached global data (5 min TTL)
+        if not hasattr(self, "_global_cache") or (now - self._global_last_update).total_seconds() > 300:
+            try:
+                global_data = await asyncio.to_thread(self._cg.get_global)
+                d = global_data["data"] if "data" in global_data else global_data
+                self._global_cache = {
+                    "total_mcap": float(d["total_market_cap"]["usd"]),
+                    "total_vol": float(d["total_volume"]["usd"]),
+                    "btc_dom": float(d["market_cap_percentage"].get("btc", 52.0)),
+                    "eth_dom": float(d["market_cap_percentage"].get("eth", 17.0)),
+                }
+                self._global_last_update = now
+                logger.info("✅ CoinGecko global data refreshed.")
+            except Exception as exc:
+                logger.warning(f"CoinGecko global failed: {exc}. Using last known or defaults.")
+                if not hasattr(self, "_global_cache"):
+                    # Hard fallback for first-run failure
+                    self._global_cache = {
+                        "total_mcap": 2.5e12,
+                        "total_vol": 8.5e10,
+                        "btc_dom": 52.5,
+                        "eth_dom": 16.8,
+                    }
+                    self._global_last_update = now
 
+        cache = self._global_cache
+        total_mcap = cache["total_mcap"]
+        total_vol = cache["total_vol"]
+        btc_dom = cache["btc_dom"]
+        eth_dom = cache["eth_dom"]
+
+        # 2. Fear & Greed cache (30 min TTL)
+        if not hasattr(self, "_fng_cache") or (now - self._fng_last_update).total_seconds() > 1800:
+            fng = await self.fetch_fear_greed()
+            if fng is not None:
+                self._fng_cache = fng
+                self._fng_last_update = now
+            elif not hasattr(self, "_fng_cache"):
+                self._fng_cache = 50 # Default neutral
+                self._fng_last_update = now
+        
         return MarketOverview(
             total_market_cap=total_mcap,
             btc_dominance=btc_dom,
             eth_dominance=eth_dom,
             total_volume_24h=total_vol,
-            timestamp=datetime.now(timezone.utc),
+            fear_greed=self._fng_cache,
+            timestamp=now,
         )
 
     # ------------------------------------------------------------------

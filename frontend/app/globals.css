@@ -67,7 +67,7 @@ html.light body {
     @apply bg-bg-elev/80 backdrop-blur-md border border-line/60 rounded-2xl shadow-glass;
   }
   .card-title {
-    @apply text-sm uppercase tracking-wider text-text-secondary;
+    @apply text-base font-bold uppercase tracking-widest text-text-primary;
   }
   .num-tabular {
     font-variant-numeric: tabular-nums;
