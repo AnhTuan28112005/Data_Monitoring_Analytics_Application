@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { format } from "date-fns";
 import { Card } from "@/components/ui/Card";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
+import { ChartDescription } from "@/components/charts/ChartDescription";
 import { api } from "@/lib/api";
 import type { AssetClass, Candle } from "@/lib/types";
 import { useMarketStore } from "@/lib/stores/marketStore";
+import { useDateRangeStore } from "@/lib/stores/dateRangeStore";
 import { FlashNumber } from "@/components/ui/FlashNumber";
 import { fmtPct, colorByChange, cls } from "@/lib/utils";
 import { useAlertStore } from "@/lib/stores/alertStore";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { SkeletonChart } from "@/components/ui/Skeleton";
 
 interface AssetOption {
   label: string;
@@ -34,11 +40,13 @@ export function ChartPanel() {
   const [tf, setTf] = useState("1h");
   const [candles, setCandles] = useState<Candle[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const dateRange = useDateRangeStore((s) => s.dateRange);
 
   const tick = useMarketStore((s) => s.ticks[`${asset.asset_class}:${asset.symbol}`]);
   const dir = useMarketStore((s) => s.lastDir[`${asset.asset_class}:${asset.symbol}`]);
 
-  // Pull pattern alerts that match the current asset, mapped to candle markers.
   const allAlerts = useAlertStore((s) => s.items);
   const patternMarkers = useMemo(() => {
     return allAlerts
@@ -58,16 +66,27 @@ export function ChartPanel() {
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    setError(null);
+    const startDate = dateRange ? format(dateRange.startDate, "yyyy-MM-dd") : undefined;
+    const endDate = dateRange ? format(dateRange.endDate, "yyyy-MM-dd") : undefined;
     api
-      .ohlcv(asset.asset_class, asset.symbol, tf, 200)
+      .ohlcv(asset.asset_class, asset.symbol, tf, 200, startDate, endDate)
       .then((r) => {
-        if (alive) setCandles(r.candles);
+        if (alive) {
+          setCandles(r.candles);
+          setError(null);
+        }
       })
-      .catch(() => alive && setCandles([]))
+      .catch((err) => {
+        if (alive) {
+          setCandles([]);
+          setError(err.message || "Failed to load chart data");
+        }
+      })
       .finally(() => alive && setLoading(false));
     const id = setInterval(() => {
       api
-        .ohlcv(asset.asset_class, asset.symbol, tf, 200)
+        .ohlcv(asset.asset_class, asset.symbol, tf, 200, startDate, endDate)
         .then((r) => alive && setCandles(r.candles))
         .catch(() => {});
     }, 20_000);
@@ -75,18 +94,22 @@ export function ChartPanel() {
       alive = false;
       clearInterval(id);
     };
-  }, [asset, tf]);
+  }, [asset, tf, dateRange]);
 
   return (
     <Card
-      title={`${asset.label} · ${tf.toUpperCase()}`}
+      title="Advanced Market Dynamics"
+      centerTitle
       action={
         <div className="flex items-center gap-3">
           {tick && (
             <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-accent-cyan bg-accent-cyan/10 px-2 py-0.5 rounded">
+                {asset.label} · {tf.toUpperCase()}
+              </span>
               <FlashNumber
                 value={tick.price}
-                className="text-base font-semibold text-text-primary"
+                className="text-base font-semibold text-text-primary ml-1"
               />
               <span className={cls("text-xs num-tabular", colorByChange(tick.change_24h_pct))}>
                 {fmtPct(tick.change_24h_pct)}
@@ -105,7 +128,7 @@ export function ChartPanel() {
         </div>
       }
     >
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-3">
         <select
           value={`${asset.asset_class}:${asset.symbol}`}
           onChange={(e) => {
@@ -113,7 +136,7 @@ export function ChartPanel() {
             const found = ASSETS.find((a) => a.asset_class === ac && a.symbol === sym);
             if (found) setAsset(found);
           }}
-          className="bg-bg-elev border border-line/60 rounded-lg px-2 py-1.5 text-sm"
+          className="bg-bg-elev border border-line/60 rounded-lg px-2 py-1.5 text-sm w-full md:w-auto"
         >
           {ASSETS.map((a) => (
             <option key={`${a.asset_class}:${a.symbol}`} value={`${a.asset_class}:${a.symbol}`}>
@@ -121,23 +144,31 @@ export function ChartPanel() {
             </option>
           ))}
         </select>
-        <div className="flex items-center gap-1 bg-bg-elev border border-line/60 rounded-lg p-1">
-          {TIMEFRAMES.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTf(t)}
-              className={cls(
-                "px-2 py-1 text-xs rounded-md uppercase transition-colors",
-                tf === t ? "bg-accent-cyan text-bg-base font-semibold" : "text-text-secondary hover:text-white"
-              )}
-            >
-              {t}
-            </button>
-          ))}
+        <div className="flex flex-col gap-1">
+          <p className="text-[10px] text-text-muted font-medium uppercase tracking-tighter">Candle Resolution</p>
+          <div className="flex items-center gap-1 bg-bg-elev border border-line/60 rounded-lg p-1 flex-wrap">
+            {TIMEFRAMES.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTf(t)}
+                className={cls(
+                  "px-1.5 md:px-2 py-1 text-xs rounded-md uppercase transition-colors flex-1 md:flex-none min-w-0",
+                  tf === t ? "bg-accent-cyan text-bg-base font-semibold" : "text-text-secondary hover:text-white"
+                )}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <p className="text-[9px] text-text-muted italic">Displays the last 200 candles for the selected interval.</p>
         </div>
         {loading && <span className="text-xs text-text-muted">loading…</span>}
       </div>
-      <CandlestickChart candles={candles} patterns={patternMarkers} height={420} />
+      {error && <ErrorMessage message={error} onRetry={() => setError(null)} />}
+      <div className="mb-8 pr-10">
+        {loading && !candles.length ? <SkeletonChart /> : <CandlestickChart candles={candles} patterns={patternMarkers} height={420} />}
+      </div>
+      <ChartDescription title={asset.label} candles={candles} symbol={asset.symbol} timeframe={tf} />
       <PatternBadges asset={asset} />
     </Card>
   );

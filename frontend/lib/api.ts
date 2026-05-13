@@ -25,10 +25,17 @@ const http = axios.create({
 export const api = {
   // ---------- Market ----------
   prices: () => http.get<PriceTick[]>("/api/market/prices").then((r) => r.data),
-  ohlcv: (asset_class: AssetClass, symbol: string, timeframe = "1h", limit = 200) =>
+  ohlcv: (
+    asset_class: AssetClass,
+    symbol: string,
+    timeframe = "1h",
+    limit = 200,
+    startDate?: string,
+    endDate?: string
+  ) =>
     http
       .get<OHLCVResponse>("/api/market/ohlcv", {
-        params: { asset_class, symbol, timeframe, limit },
+        params: { asset_class, symbol, timeframe, limit, start_date: startDate, end_date: endDate },
       })
       .then((r) => r.data),
   gainersLosers: (n = 5) =>

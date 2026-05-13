@@ -105,7 +105,12 @@ export function CandlestickChart({ candles, patterns = [], height = 420 }: Props
       .map((p) => ({
         time: p.time as any,
         position: "aboveBar" as const,
-        color: p.type === "fomo" ? "#facc15" : p.type === "whale" ? "#a855f7" : "#22d3ee",
+        color:
+          p.type === "fomo" ? "#facc15" :
+          p.type === "whale" ? "#a855f7" :
+          p.type === "price_spike" ? "#ec4899" :
+          p.type === "price_drop" ? "#ef4444" :
+          "#22d3ee",
         shape: "arrowDown" as const,
         text: p.type.toUpperCase(),
       }))
@@ -119,5 +124,19 @@ export function CandlestickChart({ candles, patterns = [], height = 420 }: Props
     chartRef.current?.timeScale().fitContent();
   }, [candles, patterns]);
 
-  return <div ref={containerRef} className="w-full" style={{ height }} />;
+  return (
+    <div className="relative" style={{ height }}>
+      {/* Y-axis label */}
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full [writing-mode:vertical-lr] text-[11px] font-bold uppercase tracking-tighter text-text-secondary pl-2 select-none pointer-events-none">
+        Price (USD)
+      </div>
+      
+      {/* X-axis label */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full text-[11px] font-bold uppercase tracking-widest text-text-secondary pt-2 select-none pointer-events-none">
+        Timeline
+      </div>
+
+      <div ref={containerRef} className="w-full" style={{ height }} />
+    </div>
+  );
 }

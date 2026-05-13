@@ -10,13 +10,13 @@ from loguru import logger
 
 from app.api import alerts as alerts_api
 from app.api import analytics as analytics_api
+from app.api import export as export_api
 from app.api import insights as insights_api
 from app.api import market as market_api
-from app.api import export as export_api # Import router xuất dữ liệu
 from app.api import portfolio as portfolio_api
 from app.api import websockets as ws_api
-from app.core.database import init_db # Import hàm khởi tạo bảng
 from app.core.config import settings
+from app.core.database import init_db
 from app.core.logging import configure_logging
 from app.services.background import (
     insight_loop,
@@ -28,11 +28,14 @@ from app.services.background import (
 
 _BACKGROUND_TASKS: list[asyncio.Task] = []
 
-init_db() # Khởi tạo bảng trong database nếu chưa tồn tại
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging()
     logger.info(f"Starting {settings.APP_NAME} on {settings.HOST}:{settings.PORT}")
+
+    # Initialise database tables (safe even if DB is not configured)
+    init_db()
 
     # Kick off background loops
     loop = asyncio.get_running_loop()
@@ -69,13 +72,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(export_api.router) # Đăng ký endpoint /api/export
+
 # Routers
 app.include_router(market_api.router)
 app.include_router(alerts_api.router)
 app.include_router(insights_api.router)
 app.include_router(analytics_api.router)
 app.include_router(portfolio_api.router)
+app.include_router(export_api.router)
 app.include_router(ws_api.router)
 
 
@@ -91,6 +95,7 @@ async def root():
             "rest_insights": "/api/insights/daily",
             "rest_analytics": "/api/analytics/...",
             "rest_portfolio": "/api/portfolio/value",
+            "rest_export": "/api/export/csv/{symbol}",
             "ws_market": "/ws/market",
             "ws_alerts": "/ws/alerts",
             "sse_alerts": "/sse/alerts",
@@ -101,4 +106,8 @@ async def root():
 
 @app.get("/health", tags=["meta"])
 async def health():
-    return {"status": "ok"}
+    from app.core.database import db_available
+    return {
+        "status": "ok",
+        "database": "connected" if db_available() else "not configured",
+    }

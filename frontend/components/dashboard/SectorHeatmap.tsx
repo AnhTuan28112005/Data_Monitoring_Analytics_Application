@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/Card";
 import dynamic from "next/dynamic";
 import type { HeatmapResponse } from "@/lib/types";
 
-const Plot = dynamic(() => import("@/components/charts/PlotlyClient"), { ssr: false });
+import Plot from "@/components/charts/PlotlyClient";
 
 export function SectorHeatmap() {
   const [data, setData] = useState<HeatmapResponse | null>(null);
@@ -60,23 +60,36 @@ export function SectorHeatmap() {
     };
   }, [data]);
 
+  const bestSector = (data && data.cells.length > 0) ? data.cells.reduce((best, cell) =>
+    cell.change_pct > best.change_pct ? cell : best
+  ) : null;
+  const worstSector = (data && data.cells.length > 0) ? data.cells.reduce((worst, cell) =>
+    cell.change_pct < worst.change_pct ? cell : worst
+  ) : null;
+
   return (
     <Card title="Sector Performance Heatmap">
       {trace ? (
-        <Plot
-          data={[trace]}
-          layout={{
-            margin: { t: 10, l: 0, r: 0, b: 0 },
-            paper_bgcolor: "transparent",
-            plot_bgcolor: "transparent",
-            font: { color: "#e6edf7", size: 11 },
-            height: 360,
-            autosize: true,
-          }}
-          config={{ displayModeBar: false, responsive: true }}
-          style={{ width: "100%", height: "360px" }}
-          useResizeHandler
-        />
+        <>
+          <Plot
+            data={[trace]}
+            layout={{
+              margin: { t: 10, l: 0, r: 0, b: 0 },
+              paper_bgcolor: "transparent",
+              plot_bgcolor: "transparent",
+              font: { color: "#e6edf7", size: 11 },
+              height: 360,
+              autosize: true,
+            }}
+            config={{ displayModeBar: false, responsive: true }}
+            style={{ width: "100%", height: "360px" }}
+            useResizeHandler
+          />
+          <div className="mt-3 p-2 bg-bg-card/50 border border-line/40 rounded text-xs text-text-secondary">
+            <p className="text-[10px] uppercase text-text-muted mb-1">Sector Analysis</p>
+            <p>Cryptocurrency sector performance visualized by size and color. {bestSector && <span>Best: <span className="text-accent-green font-semibold">{bestSector.symbol}</span> at {bestSector.change_pct.toFixed(2)}%</span>}. {worstSector && <span>Worst: <span className="text-accent-red font-semibold">{worstSector.symbol}</span> at {worstSector.change_pct.toFixed(2)}%</span>}.</p>
+          </div>
+        </>
       ) : (
         <div className="text-sm text-text-muted h-[360px] flex items-center justify-center">Loading sectors…</div>
       )}
