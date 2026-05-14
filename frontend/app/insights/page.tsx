@@ -38,6 +38,8 @@ import {
   type WeeklySummary,
 } from "@/components/dashboard/InsightCards";
 
+import { ForecastInsightCard } from "@/components/dashboard/ForecastInsightCard";
+
 const Plot = dynamic(
   () => import("@/components/charts/PlotlyClient"),
   {
@@ -60,6 +62,8 @@ interface EnhancedDailyInsight extends DailyInsight {
   anomaly_interpretations?: AnomalyInterpretation[];
   session_narratives?: string[];
   weekly_summary?: WeeklySummary;
+  forecast_summary?: any[] | null;      // NEW
+  historical_context?: any | null;     // NEW
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -96,6 +100,11 @@ const TABS = [
     id: "weekly",
     label: "Weekly",
     icon: TrendingUp,
+  },
+  {
+    id: "forecast",
+    label: "Forecast",
+    icon: TrendingDown,
   },
 ] as const;
 
@@ -536,6 +545,15 @@ export default function InsightsPage() {
             <FallbackText text="Weekly summary unavailable." />
           )}
         </Card>
+      )}
+
+      {/* FORECAST (NEW) */}
+
+      {activeTab === "forecast" && (
+        <ForecastInsightCard
+          forecasts={data.forecast_summary}
+          historicalContext={data.historical_context}
+        />
       )}
     </div>
   );

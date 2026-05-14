@@ -179,5 +179,7 @@ class EnhancedDailyInsight(DailyInsight):
     anomaly_interpretations: List[dict] = []
     session_narratives: List[str] = []
     weekly_summary: Optional[dict] = None
+    forecast_summary: Optional[List[dict]] = None   # List of forecast items per asset
+    historical_context: Optional[dict] = None       # Long-term context analysis
 
 

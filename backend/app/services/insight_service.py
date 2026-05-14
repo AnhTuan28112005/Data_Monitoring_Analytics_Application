@@ -25,6 +25,7 @@ from app.models.schemas import (
     GainerLoser,
     TimezoneSession,
 )
+from app.ml.forecast import generate_prophet_forecast
 from app.services.market_service import market_service
 from app.services.storytelling_service import storytelling_service
 
@@ -49,6 +50,15 @@ class InsightService:
     # ------------------------------------------------------------------
     async def build(self) -> DailyInsight:
         """Build the full daily insight report and persist to both caches."""
+        try:
+            return await self._build_internal()
+        except Exception:
+            logger.exception("insight_service.build() failed — writing fallback cache")
+            self._write_fallback_cache()
+            return self._cache.get("latest")  # type: ignore
+
+    async def _build_internal(self) -> DailyInsight:
+        """Actual build logic — separated so build() can catch all errors."""
 
         # --- Asset universe for this report ---
         universe: List[tuple[AssetClass, str]] = (
@@ -86,6 +96,49 @@ class InsightService:
             dfs, market_state, anomalies, gainers, losers
         )
 
+        # ── Historical context (NEW) ─────────────────────────────────────
+        try:
+            hist_context = storytelling_service.historical_context(dfs)
+        except Exception:
+            logger.warning("historical_context failed — skipping")
+            hist_context = None
+
+        # ── Prophet Forecast for BTC & Gold (NEW) ────────────────────────
+        forecast_summaries = []
+        for fc_key, fc_ac in [("crypto:BTC/USDT", "crypto"), ("gold:GC=F", "gold")]:
+            df_fc = dfs.get(fc_key)
+            if df_fc is None or len(df_fc) < 60:
+                continue
+            try:
+                # DataFrame has DatetimeIndex named 'dt' and column 'time' (unix seconds)
+                # Reset index to get 'dt' as a column, then build the prophet-compatible df
+                df_reset = df_fc.reset_index()   # columns: dt, open, high, low, close, volume
+                # Also need unix seconds — 'time' column may or may not exist
+                if "time" in df_reset.columns:
+                    df_for_prophet = df_reset[["time", "close"]].rename(
+                        columns={"time": "time_timestamp"}
+                    )
+                else:
+                    # derive unix seconds from the DatetimeIndex
+                    df_for_prophet = df_reset[["dt", "close"]].copy()
+                    df_for_prophet["time_timestamp"] = df_for_prophet["dt"].apply(
+                        lambda x: int(x.timestamp())
+                    )
+                    df_for_prophet = df_for_prophet[["time_timestamp", "close"]]
+
+                fc_points = generate_prophet_forecast(df_for_prophet, "1h")
+                current_px = float(df_fc["close"].iloc[-1])
+                fc_sym = fc_key.split(":", 1)[1]
+                fc_narrative = storytelling_service.forecast_narrative(
+                    symbol=fc_sym,
+                    asset_class=fc_ac,
+                    current_price=current_px,
+                    forecast_points=fc_points,
+                )
+                forecast_summaries.append(fc_narrative)
+            except Exception:
+                logger.warning("Forecast failed for %s — skipping", fc_key)
+
         # ── Summary sentence (used in the header card) ───────────────────
         top_regime = (
             cross_asset_insights[0].regime
@@ -120,17 +173,45 @@ class InsightService:
         # ── Store rich narrative payload separately ───────────────────────
         self._enhanced_cache["latest"] = {
             **report.model_dump(mode="json"),
-            # New narrative fields (not in the base Pydantic schema)
+            # Existing narrative fields
             "market_narrative":          market_narrative.to_dict(),
             "cross_asset_insights":      [c.to_dict() for c in cross_asset_insights],
             "anomaly_interpretations":   [a.to_dict() for a in anomaly_interpretations],
             "session_narratives":        session_narratives,
             "weekly_summary":            weekly_summary.to_dict() if weekly_summary else None,
+            # NEW fields
+            "forecast_summary":          forecast_summaries if forecast_summaries else None,
+            "historical_context":        hist_context,
         }
 
         self._last_build_ts = time.time()
-
         return report
+
+    def _write_fallback_cache(self) -> None:
+        """Write a minimal valid cache so the frontend never sees None."""
+        if "latest" in self._enhanced_cache:
+            return  # already have something — keep it
+        now = datetime.now(timezone.utc)
+        fallback = {
+            "date": now.date().isoformat(),
+            "market_state": "sideway",
+            "summary": "Insight report is being built — please click Rebuild.",
+            "anomalies": [],
+            "sessions": [],
+            "insights": ["Data pipeline is initializing. Click Rebuild to generate the full report."],
+            "top_gainers": [],
+            "top_losers": [],
+            "timestamp": now.isoformat(),
+            "market_narrative": None,
+            "cross_asset_insights": [],
+            "anomaly_interpretations": [],
+            "session_narratives": [],
+            "weekly_summary": None,
+            "forecast_summary": None,
+            "historical_context": None,
+        }
+        self._enhanced_cache["latest"] = fallback
+        self._last_build_ts = time.time()
 
     # ------------------------------------------------------------------
     async def latest(self):

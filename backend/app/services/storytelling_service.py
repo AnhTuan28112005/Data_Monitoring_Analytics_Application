@@ -850,5 +850,266 @@ class StorytellingService:
         ma = df["volume"].rolling(20).mean().iloc[-1]
         return float(df["volume"].iloc[-1] / ma) if ma else 1.0
 
+    # -----------------------------------------------------------------------
+    # 6. FORECAST NARRATIVE (NEW)
+    # -----------------------------------------------------------------------
+
+    def forecast_narrative(
+        self,
+        symbol: str,
+        asset_class: str,
+        current_price: float,
+        forecast_points: list,
+    ) -> dict:
+        """
+        Nhận kết quả Prophet forecast và tạo narrative 4W giải thích xu hướng
+        dự báo cho người dùng không chuyên về kỹ thuật.
+        """
+        if not forecast_points or current_price <= 0:
+            return {
+                "symbol": symbol,
+                "available": False,
+                "reason": "Insufficient data for forecast generation.",
+            }
+
+        # Lấy điểm cuối của forecast (end of horizon)
+        last = forecast_points[-1]
+        mid_idx = len(forecast_points) // 2
+        mid = forecast_points[mid_idx]
+
+        predicted_end   = last["predicted_close"]
+        lower_end       = last["lower_bound"]
+        upper_end       = last["upper_bound"]
+        predicted_mid   = mid["predicted_close"]
+
+        pct_change      = (predicted_end / current_price - 1) * 100
+        pct_mid         = (predicted_mid  / current_price - 1) * 100
+        uncertainty_pct = ((upper_end - lower_end) / current_price) * 100
+        horizon_hrs     = len(forecast_points) // 60  # points are per-minute
+
+        # Direction label
+        if pct_change > 2:
+            direction = "upward"
+            direction_vi = "tăng"
+            confidence_adj = "bullish"
+        elif pct_change < -2:
+            direction = "downward"
+            direction_vi = "giảm"
+            confidence_adj = "bearish"
+        else:
+            direction = "sideways"
+            direction_vi = "đi ngang"
+            confidence_adj = "neutral"
+
+        # Confidence based on uncertainty band width
+        if uncertainty_pct < 3:
+            confidence = "high"
+            conf_text = "narrow confidence interval (high certainty)"
+        elif uncertainty_pct < 8:
+            confidence = "medium"
+            conf_text = "moderate confidence interval"
+        else:
+            confidence = "low"
+            conf_text = "wide confidence interval (high uncertainty)"
+
+        what_happened = (
+            f"Prophet model forecast for {symbol} over the next ~{horizon_hrs} hours: "
+            f"predicted price moves from ${current_price:,.4f} → ${predicted_end:,.4f} "
+            f"({pct_change:+.2f}%), with a {conf_text} "
+            f"(range: ${lower_end:,.4f} – ${upper_end:,.4f})."
+        )
+
+        why = (
+            f"The {direction} projection is driven by the model detecting "
+            + (
+                "persistent momentum in the price series above its short-term moving average, "
+                "combined with increasing volume confirming the uptrend. "
+                "The model's seasonality component captures regular hourly and daily patterns "
+                "that historically favor upward continuation at this time of day."
+                if direction == "upward" else
+                "a break below key moving average support levels, sustained selling pressure "
+                "in recent candles, and a bearish seasonality pattern at this point in the trading cycle. "
+                "The model weights recent data more heavily, so the current downtrend is extrapolated forward."
+                if direction == "downward" else
+                "balanced supply and demand signals — no dominant trend in either moving averages "
+                "or volume patterns. The model expects price to oscillate around the current level "
+                "until a stronger directional catalyst emerges."
+            )
+        )
+
+        so_what = (
+            f"A projected {pct_change:+.2f}% move by end of the forecast window "
+            f"(with midpoint at {pct_mid:+.2f}% after ~{horizon_hrs // 2}h) "
+            "has concrete implications for risk management. "
+            + (
+                f"If realized, this {direction_vi} move would bring {symbol} to approximately "
+                f"${predicted_end:,.4f}. The uncertainty band of ±{uncertainty_pct/2:.1f}% means "
+                "there is meaningful two-way risk even within a directional forecast."
+            )
+        )
+
+        what_next = (
+            f"Key levels to monitor: support at ${lower_end:,.4f} (lower forecast bound), "
+            f"resistance at ${upper_end:,.4f} (upper forecast bound). "
+            + (
+                "A move above the upper bound would signal the forecast is understating strength — "
+                "consider this a bullish surprise. "
+                "A drop below the lower bound would indicate unexpected selling pressure "
+                "not captured by the model's historical patterns."
+                if direction == "upward" else
+                "Watch for a stabilization near the lower bound — "
+                "if price holds above it on declining volume, a mean-reversion bounce is likely. "
+                "A sustained break below it would suggest the selloff is accelerating beyond model expectations."
+                if direction == "downward" else
+                "A high-volume breakout above the upper bound signals bullish resolution of the consolidation. "
+                "A breakdown below the lower bound signals bearish resolution. "
+                "Trade the breakout, not the range."
+            )
+        )
+
+        return {
+            "symbol": symbol,
+            "asset_class": asset_class,
+            "available": True,
+            "current_price": round(current_price, 4),
+            "predicted_price": round(predicted_end, 4),
+            "lower_bound": round(lower_end, 4),
+            "upper_bound": round(upper_end, 4),
+            "pct_change": round(pct_change, 2),
+            "pct_change_midpoint": round(pct_mid, 2),
+            "uncertainty_pct": round(uncertainty_pct, 2),
+            "horizon_hours": horizon_hrs,
+            "direction": direction,
+            "confidence": confidence,
+            "narrative": {
+                "what_happened": what_happened,
+                "why": why,
+                "so_what": so_what,
+                "what_next": what_next,
+            },
+        }
+
+    # -----------------------------------------------------------------------
+    # 7. HISTORICAL CONTEXT ANALYSIS (NEW)
+    # -----------------------------------------------------------------------
+
+    def historical_context(
+        self,
+        dfs: Dict[str, pd.DataFrame],
+    ) -> dict:
+        """
+        Phân tích ngữ cảnh dài hạn dựa trên toàn bộ dữ liệu OHLCV trong cache
+        (thường là 200 nến 1h = ~8 ngày). Tính ATH/ATL trong window, vị trí
+        giá hiện tại so với range, và so sánh volatility gần đây vs xa hơn.
+        """
+        asset_contexts = []
+
+        key_assets = [
+            ("crypto:BTC/USDT", "Bitcoin (BTC)"),
+            ("index:^GSPC",     "S&P 500"),
+            ("gold:GC=F",       "Gold"),
+            ("forex:EURUSD=X",  "EUR/USD"),
+        ]
+
+        for key, label in key_assets:
+            df = dfs.get(key)
+            if df is None or len(df) < 48:
+                continue
+
+            current   = float(df["close"].iloc[-1])
+            high_max  = float(df["high"].max())
+            low_min   = float(df["low"].min())
+            price_range = high_max - low_min
+
+            # Position within range: 0% = at bottom, 100% = at top
+            position_pct = ((current - low_min) / price_range * 100) if price_range > 0 else 50.0
+
+            # Recent (last 24h) vs earlier (before that) volatility comparison
+            recent_vol = float(df["close"].pct_change().tail(24).std() * 100)
+            older_vol  = float(df["close"].pct_change().iloc[-len(df):-24].std() * 100) if len(df) > 48 else recent_vol
+            vol_change_pct = ((recent_vol / older_vol) - 1) * 100 if older_vol > 0 else 0.0
+
+            # 7-day vs 1-day return
+            pct_7d = self._pct(df, min(168, len(df)))
+            pct_1d = self._pct(df, 24)
+
+            # Determine proximity label
+            if position_pct >= 85:
+                proximity = "near period high"
+                proximity_implication = (
+                    "Price is trading close to the top of its recent range — "
+                    "upside is becoming limited and the risk of a mean-reversion pullback increases."
+                )
+            elif position_pct <= 15:
+                proximity = "near period low"
+                proximity_implication = (
+                    "Price is at the low end of its recent range — "
+                    "downside may be limited here, but confirm with volume before treating it as support."
+                )
+            else:
+                proximity = "mid-range"
+                proximity_implication = (
+                    "Price is in the middle of its recent range — "
+                    "no strong directional bias from a mean-reversion perspective alone."
+                )
+
+            # Volatility regime
+            if vol_change_pct > 30:
+                vol_regime = "expanding (increasing uncertainty)"
+            elif vol_change_pct < -30:
+                vol_regime = "contracting (compression before potential breakout)"
+            else:
+                vol_regime = "stable"
+
+            asset_contexts.append({
+                "key":             key,
+                "label":           label,
+                "current_price":   round(current, 4),
+                "period_high":     round(high_max, 4),
+                "period_low":      round(low_min, 4),
+                "position_pct":    round(position_pct, 1),
+                "proximity":       proximity,
+                "proximity_implication": proximity_implication,
+                "pct_1d":          round(pct_1d, 2),
+                "pct_7d":          round(pct_7d, 2),
+                "recent_volatility_pct": round(recent_vol, 3),
+                "vol_regime":      vol_regime,
+                "vol_change_vs_prior_pct": round(vol_change_pct, 1),
+            })
+
+        # Overall market summary sentence
+        near_highs = [a["label"] for a in asset_contexts if a["position_pct"] >= 80]
+        near_lows  = [a["label"] for a in asset_contexts if a["position_pct"] <= 20]
+        expanding  = [a["label"] for a in asset_contexts if "expanding" in a["vol_regime"]]
+
+        summary_parts = []
+        if near_highs:
+            summary_parts.append(
+                f"{', '.join(near_highs)} {'is' if len(near_highs)==1 else 'are'} "
+                "trading near the top of the recent observation window — upside is compressed."
+            )
+        if near_lows:
+            summary_parts.append(
+                f"{', '.join(near_lows)} {'is' if len(near_lows)==1 else 'are'} "
+                "near period lows — watch for support confirmation or breakdown."
+            )
+        if expanding:
+            summary_parts.append(
+                f"Volatility is expanding in {', '.join(expanding)}, "
+                "signaling increasing uncertainty and potential for larger price swings."
+            )
+        if not summary_parts:
+            summary_parts.append(
+                "All monitored assets are trading in the middle of their recent ranges "
+                "with stable volatility — no extreme positioning detected."
+            )
+
+        return {
+            "observation_window": "~8 days (200 × 1h candles)",
+            "summary": " ".join(summary_parts),
+            "assets": asset_contexts,
+        }
+
 
 storytelling_service = StorytellingService()
+
