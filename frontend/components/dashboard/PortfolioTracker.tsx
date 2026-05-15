@@ -148,27 +148,36 @@ export function PortfolioTracker() {
             </div>
             <p className="text-[13px] text-text-primary leading-relaxed">
               {(() => {
-                const items = resp.holdings.map((h, i) => ({ ...h, symbol: holdings[i].symbol, class: holdings[i].asset_class })).sort((a, b) => b.pnl_pct - a.pnl_pct);
+                if (!resp.holdings || resp.holdings.length === 0) return "No data available for analysis.";
+
+                const items = resp.holdings
+                  .map((h, i) => ({ ...h, symbol: holdings[i]?.symbol || "Unknown", class: holdings[i]?.asset_class || "unknown" }))
+                  .sort((a, b) => b.pnl_pct - a.pnl_pct);
+                
                 const best = items[0];
                 const worst = items[items.length - 1];
                 
                 const classTotals: Record<string, number> = {};
                 items.forEach(it => {
-                  classTotals[it.class] = (classTotals[it.class] || 0) + it.value;
+                  if (it.class) {
+                    classTotals[it.class] = (classTotals[it.class] || 0) + it.market_value;
+                  }
                 });
-                const topClass = Object.entries(classTotals).sort((a, b) => b[1] - a[1])[0];
-                const concentration = (topClass[1] / resp.total_value) * 100;
+
+                const sortedClasses = Object.entries(classTotals).sort((a, b) => b[1] - a[1]);
+                const topClass = sortedClasses[0];
+                const concentration = resp.total_value > 0 && topClass ? (topClass[1] / resp.total_value) * 100 : 0;
 
                 let insight = "";
-                if (concentration > 60) {
+                if (concentration > 60 && topClass) {
                   insight += `High ${topClass[0].toUpperCase()} concentration detected (${concentration.toFixed(1)}%). Consider diversifying to reduce systemic risk. `;
                 }
 
-                if (best.pnl_pct > 10) {
+                if (best && best.pnl_pct > 10) {
                   insight += `${best.symbol} is current performance leader (+${best.pnl_pct.toFixed(1)}%). Protect gains as the trend matures. `;
                 }
 
-                if (worst.pnl_pct < -15) {
+                if (worst && worst.pnl_pct < -15) {
                   insight += `${worst.symbol} is significantly lagging (${worst.pnl_pct.toFixed(1)}% loss). Evaluate if the thesis remains intact. `;
                 }
 

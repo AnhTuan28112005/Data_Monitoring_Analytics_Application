@@ -60,9 +60,9 @@ interface Props {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const DIRECTION_CONFIG = {
-  upward:    { icon: TrendingUp,   color: "text-accent-green",  bg: "bg-accent-green/10 border-accent-green/30",  label: "Dự báo TĂNG" },
-  downward:  { icon: TrendingDown, color: "text-accent-red",    bg: "bg-accent-red/10 border-accent-red/30",      label: "Dự báo GIẢM" },
-  sideways:  { icon: Minus,        color: "text-accent-yellow", bg: "bg-accent-yellow/10 border-accent-yellow/30", label: "Dự báo ĐI NGANG" },
+  upward:    { icon: TrendingUp,   color: "text-accent-green",  bg: "bg-accent-green/10 border-accent-green/30",  label: "UPWARD FORECAST" },
+  downward:  { icon: TrendingDown, color: "text-accent-red",    bg: "bg-accent-red/10 border-accent-red/30",      label: "DOWNWARD FORECAST" },
+  sideways:  { icon: Minus,        color: "text-accent-yellow", bg: "bg-accent-yellow/10 border-accent-yellow/30", label: "SIDEWAYS FORECAST" },
 };
 
 const CONFIDENCE_COLOR: Record<string, string> = {
@@ -142,26 +142,26 @@ function ForecastCard({ fc }: { fc: ForecastItem }) {
           <p className={cls("text-2xl font-bold num-tabular", cfg.color)}>
             {pctChange > 0 ? "+" : ""}{pctChange.toFixed(2)}%
           </p>
-          <p className="text-[10px] text-text-muted">trong ~{fc.horizon_hours}h tới</p>
+          <p className="text-[10px] text-text-muted">in the next ~{fc.horizon_hours}h</p>
         </div>
       </div>
 
       {/* Price targets */}
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="rounded-lg bg-bg-base/50 p-2">
-          <p className="text-[10px] uppercase text-text-muted">Giá hiện tại</p>
+          <p className="text-[10px] uppercase text-text-muted">Current Price</p>
           <p className="text-sm font-bold text-text-primary num-tabular">
             ${(fc.current_price ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </p>
         </div>
         <div className={cls("rounded-lg bg-bg-base/50 p-2 border", cfg.bg)}>
-          <p className="text-[10px] uppercase text-text-muted">Dự báo</p>
+          <p className="text-[10px] uppercase text-text-muted">Forecast</p>
           <p className={cls("text-sm font-bold num-tabular", cfg.color)}>
             ${(fc.predicted_price ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </p>
         </div>
         <div className="rounded-lg bg-bg-base/50 p-2">
-          <p className="text-[10px] uppercase text-text-muted">Tin cậy</p>
+          <p className="text-[10px] uppercase text-text-muted">Confidence</p>
           <p className={cls("text-sm font-bold capitalize", CONFIDENCE_COLOR[fc.confidence ?? "medium"])}>
             {fc.confidence}
           </p>
@@ -171,7 +171,7 @@ function ForecastCard({ fc }: { fc: ForecastItem }) {
       {/* Confidence band */}
       <div className="space-y-1">
         <p className="text-[10px] uppercase text-text-muted">
-          Khoảng tin cậy (±{((fc.uncertainty_pct ?? 0) / 2).toFixed(1)}%)
+          Confidence Interval (±{((fc.uncertainty_pct ?? 0) / 2).toFixed(1)}%)
         </p>
         <div className="flex items-center gap-2 text-xs">
           <span className="text-accent-red num-tabular">
@@ -295,8 +295,8 @@ export function ForecastInsightCard({ forecasts, historicalContext }: Props) {
           action={<TrendingUp className="w-4 h-4 text-accent-cyan" />}
         >
           <p className="text-xs text-text-muted mb-4">
-            Dự báo giá sử dụng mô hình Facebook Prophet — phân tích seasonality và xu hướng từ dữ liệu lịch sử.
-            Kết quả mang tính tham khảo, không phải lời khuyên đầu tư.
+            Price forecast using Facebook Prophet model — analyzing seasonality and trends from historical data. 
+            Results are for reference only, not investment advice.
           </p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {forecasts.map((fc) => (
