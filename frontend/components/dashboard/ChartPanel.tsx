@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { ChartDescription } from "@/components/charts/ChartDescription";
 import { api } from "@/lib/api";
-import type { AssetClass, Candle } from "@/lib/types";
+import type { AssetClass, Candle, ForecastPoint } from "@/lib/types";
 import { useMarketStore } from "@/lib/stores/marketStore";
 import { useDateRangeStore } from "@/lib/stores/dateRangeStore";
 import { FlashNumber } from "@/components/ui/FlashNumber";
@@ -39,6 +39,7 @@ export function ChartPanel() {
   const [asset, setAsset] = useState<AssetOption>(ASSETS[0]);
   const [tf, setTf] = useState("1h");
   const [candles, setCandles] = useState<Candle[]>([]);
+  const [forecast, setForecast] = useState<ForecastPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,27 +70,29 @@ export function ChartPanel() {
     setError(null);
     const startDate = dateRange ? format(dateRange.startDate, "yyyy-MM-dd") : undefined;
     const endDate = dateRange ? format(dateRange.endDate, "yyyy-MM-dd") : undefined;
-    api
-      .ohlcv(asset.asset_class, asset.symbol, tf, 200, startDate, endDate)
-      .then((r) => {
-        if (alive) {
-          setCandles(r.candles);
+
+    const load = () =>
+      Promise.all([
+        api.ohlcv(asset.asset_class, asset.symbol, tf, 200, startDate, endDate),
+        api.forecast(asset.symbol, tf, asset.asset_class),
+      ])
+        .then(([candleRes, forecastRes]) => {
+          if (!alive) return;
+          setCandles(candleRes.candles);
+          setForecast(forecastRes.data ?? []);
           setError(null);
-        }
-      })
-      .catch((err) => {
-        if (alive) {
-          setCandles([]);
-          setError(err.message || "Failed to load chart data");
-        }
-      })
-      .finally(() => alive && setLoading(false));
-    const id = setInterval(() => {
-      api
-        .ohlcv(asset.asset_class, asset.symbol, tf, 200, startDate, endDate)
-        .then((r) => alive && setCandles(r.candles))
-        .catch(() => {});
-    }, 20_000);
+        })
+        .catch((err) => {
+          if (alive) {
+            setCandles([]);
+            setForecast([]);
+            setError(err.message || "Failed to load chart data");
+          }
+        })
+        .finally(() => alive && setLoading(false));
+
+    load();
+    const id = setInterval(load, 20_000);
     return () => {
       alive = false;
       clearInterval(id);
@@ -166,7 +169,16 @@ export function ChartPanel() {
       </div>
       {error && <ErrorMessage message={error} onRetry={() => setError(null)} />}
       <div className="mb-8 pr-10">
-        {loading && !candles.length ? <SkeletonChart /> : <CandlestickChart candles={candles} patterns={patternMarkers} height={420} />}
+        {loading && !candles.length ? (
+          <SkeletonChart />
+        ) : (
+          <CandlestickChart
+            candles={candles}
+            forecast={forecast}
+            patterns={patternMarkers}
+            height={420}
+          />
+        )}
       </div>
       <ChartDescription title={asset.label} candles={candles} symbol={asset.symbol} timeframe={tf} />
       <PatternBadges asset={asset} />

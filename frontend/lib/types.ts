@@ -156,3 +156,20 @@ export interface DailyInsight {
   top_losers: GainerLoser[];
   timestamp: string;
 }
+
+// ─── Forecast ────────────────────────────────────────────────────────────────
+
+export interface ForecastPoint {
+  datetime: string;
+  time_timestamp: number;    // Unix seconds
+  predicted_close: number;
+  lower_bound: number;
+  upper_bound: number;
+}
+
+export interface ForecastResponse {
+  success: boolean;
+  symbol: string;
+  timeframe: string;
+  data: ForecastPoint[];
+}

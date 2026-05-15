@@ -72,3 +72,4 @@ ohlcv_cache = TTLStore()       # key: "<assetClass>:<symbol>:<tf>" -> list[ohlcv
 news_cache = TTLStore()        # key: "news" -> list
 alerts_cache = HistoryStore(maxlen=300)  # key: "alerts" -> recent alerts feed
 tick_history = HistoryStore(maxlen=240)  # per-symbol short rolling history
+forecast_cache = TTLStore()    # key: "<symbol>:<tf>" -> list[ForecastPoint dicts]

@@ -4,6 +4,7 @@ import type {
   AssetClass,
   CorrelationResponse,
   DailyInsight,
+  ForecastResponse,
   HeatmapResponse,
   IndicatorResponse,
   IntradayResponse,
@@ -19,7 +20,7 @@ import type {
 // Use Next.js rewrites so the browser hits same-origin /api and avoids CORS.
 const http = axios.create({
   baseURL: "",
-  timeout: 30000,
+  timeout: 120_000,   // 120 s — Prophet training can take up to 90 s on first run
 });
 
 export const api = {
@@ -103,4 +104,12 @@ export const api = {
   // ---------- Portfolio ----------
   portfolioValue: (holdings: PortfolioHolding[]) =>
     http.post<PortfolioResponse>("/api/portfolio/value", holdings).then((r) => r.data),
+
+  // ---------- Forecast ----------
+  forecast: (symbol: string, timeframe = "1h", asset_class?: string) =>
+    http
+      .get<ForecastResponse>(`/api/forecast/${encodeURIComponent(symbol)}`, {
+        params: { timeframe, ...(asset_class ? { asset_class } : {}) },
+      })
+      .then((r) => r.data),
 };

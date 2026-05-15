@@ -11,6 +11,7 @@ from loguru import logger
 from app.api import alerts as alerts_api
 from app.api import analytics as analytics_api
 from app.api import export as export_api
+from app.api import forecast as forecast_api
 from app.api import insights as insights_api
 from app.api import market as market_api
 from app.api import portfolio as portfolio_api
@@ -78,6 +79,7 @@ app.include_router(market_api.router)
 app.include_router(alerts_api.router)
 app.include_router(insights_api.router)
 app.include_router(analytics_api.router)
+app.include_router(forecast_api.router)
 app.include_router(portfolio_api.router)
 app.include_router(export_api.router)
 app.include_router(ws_api.router)
